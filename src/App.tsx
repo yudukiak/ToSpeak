@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/electron-vite.animate.svg'
 import './App.css'
@@ -28,6 +29,14 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
+
+      <nav>
+        <ul>
+          <li>
+            <Link to="/about">About</Link>
+          </li>
+        </ul>
+      </nav>
     </>
   )
 }
