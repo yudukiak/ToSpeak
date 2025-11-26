@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode } from 'react'
 
 // 設定の型定義
 export interface Replacement {
