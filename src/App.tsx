@@ -33,6 +33,7 @@ import {
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -75,11 +76,11 @@ function App() {
     addBlockedApp,
     removeBlockedApp,
   } = useSettings();
-  
+
   // 変換リストの追加用の状態
   const [newReplacementFrom, setNewReplacementFrom] = useState("");
   const [newReplacementTo, setNewReplacementTo] = useState("");
-  
+
   // 除外アプリの追加用の状態
   const [newBlockedApp, setNewBlockedApp] = useState("");
   const [newBlockedAppId, setNewBlockedAppId] = useState("");
@@ -155,243 +156,255 @@ function App() {
           <DrawerContent className="max-h-[90vh] flex flex-col">
             <DrawerHeader>
               <DrawerTitle>設定</DrawerTitle>
+              <DrawerDescription>設定は自動で保存されます。</DrawerDescription>
             </DrawerHeader>
             <ScrollArea className="h-[calc(90vh-10rem)]" type="always">
               <div className="pl-4 pr-4 pb-4">
                 <FieldSet className="gap-6">
-                {/* 読ませるテンプレートの設定 */}
-                <FieldGroup>
-                  <FieldLegend>読ませるテンプレート</FieldLegend>
-                  <Field>
-                    <FieldLabel>テンプレート</FieldLabel>
-                    <FieldContent>
-                      <div className="flex gap-2">
-                        <Input
-                          value={settings.speechTemplate}
-                          onChange={(e) =>
-                            updateSettings({ speechTemplate: e.target.value })
-                          }
-                          placeholder="{app}、{title}、{text}"
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            updateSettings({ speechTemplate: "{app}、{title}、{text}" })
-                          }
-                        >
-                          リセット
-                        </Button>
-                      </div>
-                      <FieldDescription>
-                        使用可能なプレースホルダー: {"{app}"}, {"{title}"}, {"{text}"}
-                      </FieldDescription>
-                    </FieldContent>
-                  </Field>
-                </FieldGroup>
-
-                {/* 変換リスト */}
-                <FieldGroup>
-                  <FieldLegend>変換リスト</FieldLegend>
-                  <Field>
-                    <FieldLabel>新しい変換を追加</FieldLabel>
-                    <FieldContent>
-                      <div className="flex gap-2">
-                        <Input
-                          value={newReplacementFrom}
-                          onChange={(e) => setNewReplacementFrom(e.target.value)}
-                          placeholder="変換前（例: Chrome）"
-                          className="flex-1"
-                        />
-                        <Input
-                          value={newReplacementTo}
-                          onChange={(e) => setNewReplacementTo(e.target.value)}
-                          placeholder="変換後（例: クローム）"
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            if (newReplacementFrom && newReplacementTo) {
-                              addReplacement({
-                                from: newReplacementFrom,
-                                to: newReplacementTo,
-                              });
-                              setNewReplacementFrom("");
-                              setNewReplacementTo("");
+                  {/* 読ませるテンプレートの設定 */}
+                  <FieldGroup>
+                    <FieldLegend>読ませるテンプレート</FieldLegend>
+                    <Field>
+                      <FieldLabel>テンプレート</FieldLabel>
+                      <FieldContent>
+                        <div className="flex gap-2">
+                          <Input
+                            value={settings.speechTemplate}
+                            onChange={(e) =>
+                              updateSettings({ speechTemplate: e.target.value })
                             }
-                          }}
-                          size="icon"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </FieldContent>
-                  </Field>
-                  {settings.replacements.length > 0 && (
-                    <div className="space-y-2">
-                      {settings.replacements.map((replacement, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 rounded-md border p-2"
-                        >
-                          <span className="flex-1 text-sm">
-                            {replacement.from} → {replacement.to}
-                          </span>
+                            placeholder="{app}、{title}、{text}"
+                            className="flex-1"
+                          />
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeReplacement(index)}
+                            variant="outline"
+                            onClick={() =>
+                              updateSettings({
+                                speechTemplate: "{app}、{title}、{text}",
+                              })
+                            }
                           >
-                            <Trash2 className="h-4 w-4" />
+                            リセット
                           </Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </FieldGroup>
+                        <FieldDescription>
+                          使用可能なプレースホルダー: {"{app}"}, {"{title}"},{" "}
+                          {"{text}"}
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                  </FieldGroup>
 
-                {/* 音量設定 */}
-                <FieldGroup>
-                  <FieldLegend>音量設定</FieldLegend>
-                  <Field>
-                    <FieldLabel>音量: {volume}</FieldLabel>
-                    <FieldContent>
-                      <Slider
-                        value={[volume]}
-                        onValueChange={handleVolumeChange}
-                        min={0}
-                        max={100}
-                        step={1}
-                        className="w-full"
-                      />
-                    </FieldContent>
-                  </Field>
-                </FieldGroup>
-
-                {/* 読ませないアプリの設定 */}
-                <FieldGroup>
-                  <FieldLegend>読ませないアプリ</FieldLegend>
-                  <Field>
-                    <FieldLabel>新しい除外アプリを追加</FieldLabel>
-                    <FieldContent>
+                  {/* 変換リスト */}
+                  <FieldGroup>
+                    <FieldLegend>変換リスト</FieldLegend>
+                    <Field>
+                      <FieldLabel>新しい変換を追加</FieldLabel>
+                      <FieldContent>
+                        <div className="flex gap-2">
+                          <Input
+                            value={newReplacementFrom}
+                            onChange={(e) =>
+                              setNewReplacementFrom(e.target.value)
+                            }
+                            placeholder="変換前（例: Chrome）"
+                            className="flex-1"
+                          />
+                          <Input
+                            value={newReplacementTo}
+                            onChange={(e) =>
+                              setNewReplacementTo(e.target.value)
+                            }
+                            placeholder="変換後（例: クローム）"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (newReplacementFrom && newReplacementTo) {
+                                addReplacement({
+                                  from: newReplacementFrom,
+                                  to: newReplacementTo,
+                                });
+                                setNewReplacementFrom("");
+                                setNewReplacementTo("");
+                              }
+                            }}
+                            size="icon"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </FieldContent>
+                    </Field>
+                    {settings.replacements.length > 0 && (
                       <div className="space-y-2">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={newBlockedApp}
-                              onChange={(e) => setNewBlockedApp(e.target.value)}
-                              placeholder="アプリ名（例: Google Chrome）"
-                              className="flex-1"
-                            />
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={newBlockedAppIsRegex}
-                                onCheckedChange={setNewBlockedAppIsRegex}
-                                id="app-regex"
-                              />
-                              <label
-                                htmlFor="app-regex"
-                                className="text-sm text-muted-foreground whitespace-nowrap"
-                              >
-                                正規表現
-                              </label>
-                            </div>
+                        {settings.replacements.map((replacement, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 rounded-md border p-2"
+                          >
+                            <span className="flex-1 text-sm">
+                              {replacement.from} → {replacement.to}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeReplacement(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={newBlockedAppId}
-                              onChange={(e) => setNewBlockedAppId(e.target.value)}
-                              placeholder="アプリID（例: Chrome.YMHJ3T54TUN5QFISD4A7LWJ7MI）"
-                              className="flex-1"
-                            />
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={newBlockedAppIdIsRegex}
-                                onCheckedChange={setNewBlockedAppIdIsRegex}
-                                id="app-id-regex"
-                              />
-                              <label
-                                htmlFor="app-id-regex"
-                                className="text-sm text-muted-foreground whitespace-nowrap"
-                              >
-                                正規表現
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            if (newBlockedApp || newBlockedAppId) {
-                              addBlockedApp({
-                                app: newBlockedApp || undefined,
-                                app_id: newBlockedAppId || undefined,
-                                appIsRegex: newBlockedAppIsRegex,
-                                appIdIsRegex: newBlockedAppIdIsRegex,
-                              });
-                              setNewBlockedApp("");
-                              setNewBlockedAppId("");
-                              setNewBlockedAppIsRegex(false);
-                              setNewBlockedAppIdIsRegex(false);
-                            }
-                          }}
-                          className="w-full"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          追加
-                        </Button>
+                        ))}
                       </div>
-                      <FieldDescription>
-                        アプリ名またはアプリIDのいずれかを指定してください。正規表現を使用する場合は、スイッチをONにしてください。
-                      </FieldDescription>
-                    </FieldContent>
-                  </Field>
-                  {settings.blockedApps.length > 0 && (
-                    <div className="space-y-2">
-                      {settings.blockedApps.map((blockedApp, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 rounded-md border p-2"
-                        >
-                          <div className="flex-1 text-sm space-y-1">
-                            {blockedApp.app && (
-                              <div>
-                                アプリ: {blockedApp.app}
-                                {blockedApp.appIsRegex && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    (正規表現)
-                                  </span>
-                                )}
+                    )}
+                  </FieldGroup>
+
+                  {/* 音量設定 */}
+                  <FieldGroup>
+                    <FieldLegend>音量設定</FieldLegend>
+                    <Field>
+                      <FieldLabel>音量: {volume}</FieldLabel>
+                      <FieldContent>
+                        <Slider
+                          value={[volume]}
+                          onValueChange={handleVolumeChange}
+                          min={0}
+                          max={100}
+                          step={1}
+                          className="w-full"
+                        />
+                      </FieldContent>
+                    </Field>
+                  </FieldGroup>
+
+                  {/* 読ませないアプリの設定 */}
+                  <FieldGroup>
+                    <FieldLegend>読ませないアプリ</FieldLegend>
+                    <Field>
+                      <FieldLabel>新しい除外アプリを追加</FieldLabel>
+                      <FieldContent>
+                        <div className="space-y-2">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={newBlockedApp}
+                                onChange={(e) =>
+                                  setNewBlockedApp(e.target.value)
+                                }
+                                placeholder="アプリ名（例: Google Chrome）"
+                                className="flex-1"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={newBlockedAppIsRegex}
+                                  onCheckedChange={setNewBlockedAppIsRegex}
+                                  id="app-regex"
+                                />
+                                <label
+                                  htmlFor="app-regex"
+                                  className="text-sm text-muted-foreground whitespace-nowrap"
+                                >
+                                  正規表現
+                                </label>
                               </div>
-                            )}
-                            {blockedApp.app_id && (
-                              <div>
-                                ID: {blockedApp.app_id}
-                                {blockedApp.appIdIsRegex && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    (正規表現)
-                                  </span>
-                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={newBlockedAppId}
+                                onChange={(e) =>
+                                  setNewBlockedAppId(e.target.value)
+                                }
+                                placeholder="アプリID（例: Chrome.YMHJ3T54TUN5QFISD4A7LWJ7MI）"
+                                className="flex-1"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={newBlockedAppIdIsRegex}
+                                  onCheckedChange={setNewBlockedAppIdIsRegex}
+                                  id="app-id-regex"
+                                />
+                                <label
+                                  htmlFor="app-id-regex"
+                                  className="text-sm text-muted-foreground whitespace-nowrap"
+                                >
+                                  正規表現
+                                </label>
                               </div>
-                            )}
+                            </div>
                           </div>
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeBlockedApp(index)}
+                            onClick={() => {
+                              if (newBlockedApp || newBlockedAppId) {
+                                addBlockedApp({
+                                  app: newBlockedApp || undefined,
+                                  app_id: newBlockedAppId || undefined,
+                                  appIsRegex: newBlockedAppIsRegex,
+                                  appIdIsRegex: newBlockedAppIdIsRegex,
+                                });
+                                setNewBlockedApp("");
+                                setNewBlockedAppId("");
+                                setNewBlockedAppIsRegex(false);
+                                setNewBlockedAppIdIsRegex(false);
+                              }
+                            }}
+                            className="w-full"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Plus className="h-4 w-4 mr-2" />
+                            追加
                           </Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </FieldGroup>
-              </FieldSet>
+                        <FieldDescription>
+                          アプリ名またはアプリIDのいずれかを指定してください。正規表現を使用する場合は、スイッチをONにしてください。
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                    {settings.blockedApps.length > 0 && (
+                      <div className="space-y-2">
+                        {settings.blockedApps.map((blockedApp, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 rounded-md border p-2"
+                          >
+                            <div className="flex-1 text-sm space-y-1">
+                              {blockedApp.app && (
+                                <div>
+                                  アプリ: {blockedApp.app}
+                                  {blockedApp.appIsRegex && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      (正規表現)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {blockedApp.app_id && (
+                                <div>
+                                  ID: {blockedApp.app_id}
+                                  {blockedApp.appIdIsRegex && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      (正規表現)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeBlockedApp(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </FieldGroup>
+                </FieldSet>
               </div>
             </ScrollArea>
           </DrawerContent>
