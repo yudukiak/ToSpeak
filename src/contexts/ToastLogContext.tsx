@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react'
 
 // 過去の通知の型定義
 export interface PastNotification {
@@ -36,6 +36,111 @@ const ToastLogContext = createContext<ToastLogContextType | undefined>(undefined
 // IPC通信のセットアップ（モジュールレベルで一度だけ実行）
 let ipcSetupDone = false
 const setLogsRef = { current: null as ((updater: (prevLogs: ToastLog[]) => ToastLog[]) => void) | null }
+const settingsRef = { current: null as any }
+
+// 通知データを加工して読み上げ用テキストを生成
+const processNotificationForSpeech = (log: ToastLog): string => {
+  if (log.type === "notification") {
+    const settings = settingsRef.current
+    if (!settings) {
+      // 設定がまだ読み込まれていない場合はデフォルト処理
+      const parts: string[] = [];
+      if (log.app) parts.push(log.app);
+      if (log.title) parts.push(log.title);
+      if (log.text) {
+        const text = log.text.replace(/\n/g, " ");
+        parts.push(text);
+      }
+      return parts.join("、") || "通知があります";
+    }
+    
+    // 除外アプリのチェック
+    if (settings.blockedApps.some((blocked: any) => {
+      // アプリ名のチェック
+      if (blocked.app) {
+        if (blocked.appIsRegex) {
+          // 正規表現でマッチ
+          try {
+            const regex = new RegExp(blocked.app);
+            if (log.app && regex.test(log.app)) {
+              return true;
+            }
+          } catch (e) {
+            // 正規表現が無効な場合は通常の文字列マッチにフォールバック
+            if (log.app === blocked.app) {
+              return true;
+            }
+          }
+        } else {
+          // 通常の文字列マッチ
+          if (log.app === blocked.app) {
+            return true;
+          }
+        }
+      }
+      
+      // アプリIDのチェック
+      if (blocked.app_id) {
+        if (blocked.appIdIsRegex) {
+          // 正規表現でマッチ
+          try {
+            const regex = new RegExp(blocked.app_id);
+            if (log.app_id && regex.test(log.app_id)) {
+              return true;
+            }
+          } catch (e) {
+            // 正規表現が無効な場合は通常の文字列マッチにフォールバック
+            if (log.app_id === blocked.app_id) {
+              return true;
+            }
+          }
+        } else {
+          // 通常の文字列マッチ
+          if (log.app_id === blocked.app_id) {
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    })) {
+      return ""; // 除外アプリの場合は空文字を返す
+    }
+    
+    // テンプレートを使用してテキストを生成
+    let text = settings.speechTemplate || "{app}、{title}、{text}";
+    
+    // プレースホルダーを置換（空の場合は空文字列を挿入）
+    const appText = (log.app || "").trim();
+    const titleText = (log.title || "").trim();
+    // 本文の改行を空白に置換
+    const textContent = (log.text || "").replace(/\n/g, " ").trim();
+    
+    text = text.replace(/{app}/g, appText);
+    text = text.replace(/{title}/g, titleText);
+    text = text.replace(/{text}/g, textContent);
+    
+    // 変換リストを適用（大文字小文字を区別せずに置換）
+    settings.replacements.forEach((replacement: any) => {
+      if (replacement.from && replacement.to) {
+        // エスケープして正規表現として使用
+        const escapedFrom = replacement.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
+      }
+    });
+    
+    // 連続する空白や区切り文字を整理
+    text = text.replace(/\s+/g, " ").trim();
+    // 連続する区切り文字（、や、）を1つに
+    text = text.replace(/[、，,]+/g, "、").trim();
+    // 先頭と末尾の区切り文字を削除
+    text = text.replace(/^[、，,]+|[、，,]+$/g, "").trim();
+    
+    return text || "通知があります";
+  }
+  
+  return "";
+};
 
 function setupIpcListener() {
   if (ipcSetupDone || typeof window === 'undefined' || !(window as any).ipcRenderer) {
@@ -43,34 +148,6 @@ function setupIpcListener() {
   }
 
   const ipcRenderer = (window as any).ipcRenderer
-
-  // 通知データを加工して読み上げ用テキストを生成（仮実装）
-  const processNotificationForSpeech = (log: ToastLog): string => {
-    if (log.type === "notification") {
-      const parts: string[] = [];
-      
-      // アプリ名
-      if (log.app) {
-        parts.push(log.app);
-      }
-      
-      // タイトル
-      if (log.title) {
-        parts.push(log.title);
-      }
-      
-      // 本文
-      if (log.text) {
-        // 改行を空白に置換
-        const text = log.text.replace(/\n/g, " ");
-        parts.push(text);
-      }
-      
-      return parts.join("、") || "通知があります";
-    }
-    
-    return "";
-  };
 
   const handleToastLog = (_event: any, message: ToastLog) => {
     // レンダラー側のコンソールに全てのログを出力
@@ -120,6 +197,8 @@ function setupIpcListener() {
           } else {
             console.warn('⚠️ ipcRendererが利用できません')
           }
+        } else {
+          console.log('🔇 除外アプリのため読み上げをスキップ:', message.app)
         }
       }
     } else {
@@ -168,6 +247,43 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
     setupIpcListener()
     isSetupRef.current = true
   }
+  
+  // settingsを定期的に更新（useEffectで設定を監視）
+  useEffect(() => {
+    const updateSettings = () => {
+      try {
+        const saved = localStorage.getItem('toast-speak-settings')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          // デフォルト設定とマージ
+          settingsRef.current = {
+            speechTemplate: parsed.speechTemplate || '{app}、{title}、{text}',
+            replacements: parsed.replacements || [],
+            blockedApps: parsed.blockedApps || [],
+          }
+        } else {
+          // デフォルト設定を使用
+          settingsRef.current = {
+            speechTemplate: '{app}、{title}、{text}',
+            replacements: [],
+            blockedApps: [],
+          }
+        }
+      } catch {
+        // エラー時はデフォルト設定を使用
+        settingsRef.current = {
+          speechTemplate: '{app}、{title}、{text}',
+          replacements: [],
+          blockedApps: [],
+        }
+      }
+    }
+    
+    updateSettings()
+    // 定期的に設定を更新（設定変更を検知するため）
+    const interval = setInterval(updateSettings, 200)
+    return () => clearInterval(interval)
+  }, [])
 
   const clearLogs = () => {
     setLogs([])
