@@ -1,9 +1,8 @@
-import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, ipcMain } from 'electron'
+import { spawn, ChildProcess } from 'child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
@@ -25,6 +24,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
+let toastBridgeProcess: ChildProcess | null = null
 
 function createWindow() {
   win = new BrowserWindow({
@@ -37,6 +37,8 @@ function createWindow() {
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
+    // Pythonプロセスを起動（統合版）
+    startToastBridge()
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -47,10 +49,228 @@ function createWindow() {
   }
 }
 
+/**
+ * Toast通知と読み上げを統合したPythonプロセスを起動する
+ */
+function startToastBridge() {
+  if (toastBridgeProcess) {
+    return
+  }
+
+  // Pythonスクリプトのパスを取得（統合版）
+  const pythonScriptPath = path.join(process.env.APP_ROOT || __dirname, 'python', 'toast_bridge.py')
+  
+  // Pythonコマンドを検出（pyコマンドを優先、なければpython）
+  const pythonCommand = process.platform === 'win32' ? 'py' : 'python3'
+
+  // Pythonプロセスを起動（UTF-8エンコーディングを強制）
+  toastBridgeProcess = spawn(pythonCommand, [pythonScriptPath], {
+    cwd: process.env.APP_ROOT || __dirname,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONLEGACYWINDOWSSTDIO: '0',
+    },
+  })
+
+  // stdoutからJSONメッセージを受け取る（UTF-8としてデコード）
+  let buffer = ''
+  toastBridgeProcess.stdout?.on('data', (data: Buffer) => {
+    const text = data.toString('utf-8').replace(/^\uFEFF/, '')
+    buffer += text
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      if (line.trim()) {
+        try {
+          const message = JSON.parse(line.trim())
+          
+          // Electronのコンソールにログ出力
+          const source = message.source || 'toast_bridge'
+          const type = message.type || 'unknown'
+          const msgText = message.message || JSON.stringify(message)
+          
+          switch (type) {
+            case 'debug':
+              console.debug(`[${source}] ${msgText}`)
+              break
+            case 'error':
+              console.error(`[${source}] ${msgText}`)
+              break
+            case 'info':
+              console.info(`[${source}] ${msgText}`)
+              break
+            case 'ready':
+              console.log(`[${source}] ${msgText}`)
+              break
+            case 'notification':
+              console.log(`[${source}] Notification: ${message.app || 'Unknown'} - ${message.title || 'No title'}`)
+              break
+            default:
+              console.log(`[${source}] ${type}:`, message)
+          }
+          
+          // レンダラー側のコンソールにも出力
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('console-log', {
+              level: type === 'debug' ? 'debug' : type === 'error' ? 'error' : type === 'info' ? 'info' : 'log',
+              source: source,
+              message: msgText,
+              data: message
+            })
+          }
+          
+          if (message.type === 'ready') {
+            // 準備完了したら初期音量を送信
+            setTimeout(() => {
+              setVolume(20)
+            }, 100)
+          }
+          
+          // すべてのメッセージをReact側に転送
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('toast-log', message)
+          }
+        } catch (e) {
+          const errorMsg = `Toast Bridge: JSON解析エラー ${line} ${e}`
+          console.error(errorMsg)
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+          }
+        }
+      }
+    }
+  })
+
+  // stderrからのエラーメッセージ（UTF-8としてデコード）
+  toastBridgeProcess.stderr?.on('data', (data: Buffer) => {
+    const text = data.toString('utf-8')
+    console.error('Toast Bridge (stderr):', text)
+  })
+
+  // プロセス終了時の処理
+  toastBridgeProcess.on('exit', (code) => {
+    toastBridgeProcess = null
+    
+    // 異常終了の場合は再起動を試みる
+    if (code !== 0 && code !== null) {
+      setTimeout(() => {
+        if (win && !win.isDestroyed()) {
+          startToastBridge()
+        }
+      }, 3000)
+    }
+  })
+
+  toastBridgeProcess.on('error', (error) => {
+    const errorMsg = `Toast Bridge: プロセスエラー ${error}`
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg, data: { error: String(error) } })
+    }
+    toastBridgeProcess = null
+  })
+}
+
+/**
+ * Toast BridgeのPythonプロセスを終了する
+ */
+function stopToastBridge() {
+  if (toastBridgeProcess) {
+    toastBridgeProcess.kill()
+    toastBridgeProcess = null
+  }
+}
+
+/**
+ * テキストをPythonプロセスに送信して読み上げる
+ */
+function speakText(text: string) {
+  if (!toastBridgeProcess || !toastBridgeProcess.stdin) {
+    const errorMsg = 'Toast Bridge: 読み上げプロセスが起動していません'
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+    }
+    return
+  }
+
+  if (toastBridgeProcess.stdin.destroyed) {
+    const errorMsg = 'Toast Bridge: stdinが破棄されています'
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+    }
+    return
+  }
+
+  const message = {
+    type: 'speak',
+    text: text
+  }
+
+  try {
+    const jsonMessage = JSON.stringify(message) + '\n'
+    const success = toastBridgeProcess.stdin.write(jsonMessage, 'utf-8')
+    if (!success) {
+      const warnMsg = 'Toast Bridge: stdin.writeがfalseを返しました'
+      console.warn(warnMsg)
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('console-log', { level: 'warn', source: 'main', message: warnMsg })
+      }
+    }
+  } catch (error) {
+    const errorMsg = `Toast Bridge: 読み上げコマンド送信エラー ${error}`
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+    }
+  }
+}
+
+/**
+ * 音量をPythonプロセスに送信して設定する
+ */
+function setVolume(volume: number) {
+  if (!toastBridgeProcess || !toastBridgeProcess.stdin) {
+    return
+  }
+
+  const message = {
+    type: 'set_volume',
+    volume: volume
+  }
+
+  try {
+    const jsonMessage = JSON.stringify(message) + '\n'
+    toastBridgeProcess.stdin.write(jsonMessage, 'utf-8')
+  } catch {
+    // エラーハンドリング
+  }
+}
+
+// IPCハンドラー: レンダラーから読み上げリクエストを受け取る
+ipcMain.on('speak-text', (_event, text: string) => {
+  const logMsg = `IPC受信: speak-text ${text}`
+  console.log(logMsg)
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('console-log', { level: 'log', source: 'main', message: logMsg })
+  }
+  speakText(text)
+})
+
+// IPCハンドラー: レンダラーから音量設定リクエストを受け取る
+ipcMain.on('set-volume', (_event, volume: number) => {
+  setVolume(volume)
+})
+
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  stopToastBridge()
   if (process.platform !== 'darwin') {
     app.quit()
     win = null
@@ -66,3 +286,8 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(createWindow)
+
+// アプリ終了時にPythonプロセスをクリーンアップ
+app.on('before-quit', () => {
+  stopToastBridge()
+})

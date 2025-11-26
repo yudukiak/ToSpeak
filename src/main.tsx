@@ -1,20 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createHashRouter, RouterProvider } from 'react-router-dom'
+import { ToastLogProvider } from './contexts/ToastLogContext'
 import App from './App.tsx'
-import './index.css'
-
-import { About } from './About'
-
-const router = createHashRouter([
-  { path: '/', element: <App /> },
-  { path: '/about', element: <About /> },
-])
-
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <ToastLogProvider>
+      <App />
+    </ToastLogProvider>
   </React.StrictMode>,
 )
 
