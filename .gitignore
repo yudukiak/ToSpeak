@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 dist-electron
+release
 *.local
 
 # Editor directories and files
@@ -26,4 +27,3 @@ dist-electron
 
 # Python
 build
-toast_bridge.spec

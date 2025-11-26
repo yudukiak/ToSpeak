@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { spawn, ChildProcess } from 'child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -57,22 +58,61 @@ function startToastBridge() {
     return
   }
 
-  // Pythonスクリプトのパスを取得（統合版）
-  const pythonScriptPath = path.join(process.env.APP_ROOT || __dirname, 'python', 'toast_bridge.py')
-  
-  // Pythonコマンドを検出（pyコマンドを優先、なければpython）
-  const pythonCommand = process.platform === 'win32' ? 'py' : 'python3'
+  // ビルド時はtoast_bridge.exeを使用、開発時はPythonスクリプトを使用
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+  let toastBridgePath: string
+  let command: string
+  let args: string[]
 
-  // Pythonプロセスを起動（UTF-8エンコーディングを強制）
-  toastBridgeProcess = spawn(pythonCommand, [pythonScriptPath], {
-    cwd: process.env.APP_ROOT || __dirname,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      PYTHONIOENCODING: 'utf-8',
-      PYTHONLEGACYWINDOWSSTDIO: '0',
-    },
-  })
+  if (isDev) {
+    // 開発時: Pythonスクリプトを直接実行
+    toastBridgePath = path.join(process.env.APP_ROOT || __dirname, 'python', 'toast_bridge.py')
+    command = process.platform === 'win32' ? 'py' : 'python3'
+    args = [toastBridgePath]
+  } else {
+    // 本番時: PyInstallerでビルドしたexeを使用
+    toastBridgePath = path.join(process.resourcesPath, 'toast_bridge.exe')
+    command = toastBridgePath
+    args = []
+    
+    // ファイル存在確認
+    if (!existsSync(toastBridgePath)) {
+      console.error(`[Toast Bridge] ファイルが存在しません: ${toastBridgePath}`)
+      // 代替パスを試す
+      const altPath = path.join(__dirname, '..', 'resources', 'toast_bridge.exe')
+      if (existsSync(altPath)) {
+        toastBridgePath = altPath
+        command = altPath
+      }
+    } else {
+      // 絶対パスを正規化
+      toastBridgePath = path.resolve(toastBridgePath)
+      command = toastBridgePath
+    }
+  }
+
+  // プロセスを起動（UTF-8エンコーディングを強制）
+  // 作業ディレクトリはexeファイルがあるディレクトリに設定（DLLの検索パスのため）
+  const workingDir = isDev 
+    ? (process.env.APP_ROOT || __dirname)
+    : process.resourcesPath // 本番時はresourcesディレクトリ
+  
+  try {
+    toastBridgeProcess = spawn(command, args, {
+      cwd: workingDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8',
+        PYTHONLEGACYWINDOWSSTDIO: '0',
+        PATH: process.env.PATH, // PATH環境変数を継承（DLL検索のため）
+      },
+      shell: false,
+    })
+  } catch (spawnError) {
+    console.error(`[Toast Bridge] spawnエラー:`, spawnError)
+    throw spawnError
+  }
 
   // stdoutからJSONメッセージを受け取る（UTF-8としてデコード）
   let buffer = ''
@@ -166,7 +206,22 @@ function startToastBridge() {
 
   toastBridgeProcess.on('error', (error) => {
     const errorMsg = `Toast Bridge: プロセスエラー ${error}`
-    console.error(errorMsg)
+    const errnoError = error as NodeJS.ErrnoException
+    console.error(`[Toast Bridge] エラー詳細:`, {
+      message: error.message,
+      code: errnoError.code,
+      errno: errnoError.errno,
+      syscall: errnoError.syscall,
+      path: errnoError.path,
+      command: command,
+      args: args,
+      cwd: process.env.APP_ROOT || __dirname,
+      resourcesPath: process.resourcesPath,
+      fileExists: existsSync(toastBridgePath),
+      platform: process.platform,
+      arch: process.arch,
+    })
+    console.error(errorMsg, error)
     if (win && !win.isDestroyed()) {
       win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg, data: { error: String(error) } })
     }

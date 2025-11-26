@@ -11,6 +11,12 @@
     "dist",
     "dist-electron"
   ],
+  "extraResources": [
+    {
+      "from": "build/toast_bridge.exe",
+      "to": "toast_bridge.exe"
+    }
+  ],
   "mac": {
     "target": [
       "dmg"
