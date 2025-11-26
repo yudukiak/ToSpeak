@@ -386,11 +386,6 @@ async def notification_loop(listener):
                     
                     # stdoutにJSONとして送信（Electron側で受け取る）
                     send_json(msg)
-                    
-                    # 自動で読み上げ
-                    speech_text = process_notification_for_speech(msg)
-                    if speech_text:
-                        await speak_text(speech_text)
 
             # 古いIDをクリーンアップ（メモリリーク防止）
             if len(processed_ids) > 1000:
