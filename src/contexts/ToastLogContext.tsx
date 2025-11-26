@@ -1,8 +1,18 @@
 import { createContext, useContext, useState, useRef, ReactNode } from 'react'
 
+// 過去の通知の型定義
+export interface PastNotification {
+  app: string
+  app_id: string
+  title: string
+  text: string
+  notification_id: string
+  timestamp: string
+}
+
 // Toast通知ログの型定義
 export interface ToastLog {
-  type: 'notification' | 'ready' | 'info' | 'error' | 'debug'
+  type: 'notification' | 'ready' | 'info' | 'error' | 'debug' | 'past_notifications'
   app?: string
   app_id?: string
   title?: string
@@ -11,6 +21,7 @@ export interface ToastLog {
   timestamp?: string
   message?: string
   source?: string
+  notifications?: PastNotification[] // 過去の通知一覧
 }
 
 interface ToastLogContextType {

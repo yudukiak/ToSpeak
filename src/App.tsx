@@ -6,7 +6,10 @@ import {
   Info,
   HelpCircle,
   Menu,
+  Settings,
+  History,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,13 +18,37 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import { useToastLogs } from "./contexts/ToastLogContext";
+import { useToastLogs, PastNotification } from "./contexts/ToastLogContext";
 import "./App.css";
 
 function App() {
@@ -50,6 +77,11 @@ function App() {
         return {
           icon: Info,
           title: "情報",
+        };
+      case "past_notifications":
+        return {
+          icon: History,
+          title: "過去の通知",
         };
       default:
         return {
@@ -84,22 +116,36 @@ function App() {
   return (
     <ScrollArea className="h-dvh w-dvw" type="always">
       <main className="h-dvh w-dvw p-4">
-        {/* 音量設定 */}
-        <div className="mb-4 p-4 border rounded-lg">
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium min-w-[60px]">
-              音量: {volume}
-            </label>
-            <Slider
-              value={[volume]}
-              onValueChange={handleVolumeChange}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-          </div>
-        </div>
+        <Drawer>
+          <DrawerTrigger className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            <span>Settings</span>
+          </DrawerTrigger>
+          <DrawerContent className="">
+            <DrawerHeader>
+              <DrawerTitle>設定</DrawerTitle>
+            </DrawerHeader>
+            <div>
+              {/* 音量設定 */}
+              <div>
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium min-w-[60px]">
+                    音量: {volume}
+                  </label>
+                  <Slider
+                    value={[volume]}
+                    onValueChange={handleVolumeChange}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+            <DrawerFooter>Footer</DrawerFooter>
+          </DrawerContent>
+        </Drawer>
 
         {/* ログ表示エリア */}
         <div className="w-full">
@@ -120,7 +166,100 @@ function App() {
                   title,
                   type,
                   message,
+                  notifications,
                 } = log;
+
+                // 過去の通知の場合、Dialogで表示
+                if (type === "past_notifications" && notifications) {
+                  return (
+                    <Card
+                      key={`past-notifications-${timestamp}`}
+                      className="m-2 mr-4"
+                    >
+                      <CardHeader className="gap-0">
+                        <CardTitle className="flex items-center gap-2">
+                          <Icon className="h-5 w-5" />
+                          <span className="font-semibold">{title}</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-sm text-gray-700 dark:text-gray-300">
+                        {message}
+                      </CardContent>
+                      <CardFooter>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline">詳細を表示</Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-full! h-full">
+                            <DialogHeader className="text-left">
+                              <DialogTitle>
+                                過去の通知（{notifications.length}件）
+                              </DialogTitle>
+                              <DialogDescription>
+                                起動時に既に存在していた通知の一覧です
+                              </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea
+                              className="min-w-[80dvw] h-[calc(100dvh-8rem)] pr-3"
+                              type="always"
+                            >
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="min-w-[150px]">
+                                      app
+                                    </TableHead>
+                                    <TableHead className="min-w-[150px]">
+                                      app_id
+                                    </TableHead>
+                                    <TableHead className="min-w-[200px]">
+                                      title
+                                    </TableHead>
+                                    <TableHead className="min-w-[300px]">
+                                      text
+                                    </TableHead>
+                                    <TableHead className="min-w-[150px]">
+                                      timestamp
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {notifications.map(
+                                    (notif: PastNotification) => (
+                                      <TableRow key={notif.notification_id}>
+                                        <TableCell className="font-medium whitespace-nowrap">
+                                          {notif.app}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap">
+                                          {notif.app_id}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap">
+                                          {notif.title}
+                                        </TableCell>
+                                        <TableCell className="whitespace-pre-wrap">
+                                          {notif.text}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap">
+                                          {formatTimestamp(notif.timestamp)}
+                                        </TableCell>
+                                      </TableRow>
+                                    )
+                                  )}
+                                </TableBody>
+                              </Table>
+                              <ScrollBar
+                                className=""
+                                orientation="horizontal"
+                              />
+                            </ScrollArea>
+                          </DialogContent>
+                        </Dialog>
+                      </CardFooter>
+                    </Card>
+                  );
+                }
+
+                // 通常の通知
                 return (
                   <Card
                     key={`${notification_id || index}-${timestamp}`}

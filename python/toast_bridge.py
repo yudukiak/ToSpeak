@@ -263,6 +263,7 @@ async def notification_loop(listener):
     
 
     processed_ids = set()
+    past_notifications = []
 
     # 既存の通知をスキップ（起動時の既存通知は表示しない）
     try:
@@ -270,6 +271,60 @@ async def notification_loop(listener):
         if existing:
             for n in existing:
                 processed_ids.add(n.id)
+                
+                # 既存通知の内容を取得
+                try:
+                    # アプリ名を取得
+                    app_name = "通知"
+                    if n.app_info and n.app_info.display_info:
+                        app_name = n.app_info.display_info.display_name
+                    
+                    # アプリIDを取得
+                    app_id = ""
+                    if n.app_info and hasattr(n.app_info, 'app_user_model_id'):
+                        try:
+                            app_id = n.app_info.app_user_model_id
+                        except:
+                            pass
+                    
+                    # 通知テキストを取得（タイトルと本文を分離）
+                    bindings = (n.notification.visual.bindings 
+                               if n.notification and n.notification.visual and n.notification.visual.bindings 
+                               else [])
+                    text_parts = [
+                        el.text.strip()
+                        for binding in bindings
+                        for el in binding.get_text_elements()
+                        if el.text and el.text.strip()
+                    ]
+                    
+                    # 最初の要素をタイトル、残りを本文として扱う
+                    title = text_parts[0] if text_parts else ""
+                    body = " ".join(text_parts[1:]).strip()
+                    
+                    # 過去の通知として保存
+                    past_notifications.append({
+                        "app": app_name,
+                        "app_id": app_id if app_id else "",
+                        "title": title,
+                        "text": body,
+                        "notification_id": str(n.id),
+                        "timestamp": datetime.now().isoformat()
+                    })
+                except Exception as log_error_ex:
+                    # ログ出力でエラーが発生しても処理は続行
+                    pass
+            
+            # 過去の通知がある場合、1つのメッセージとして送信
+            if past_notifications:
+                send_json({
+                    "type": "past_notifications",
+                    "source": "toast_bridge",
+                    "title": "過去の通知",
+                    "message": f"{len(past_notifications)}件の過去の通知があります",
+                    "notifications": past_notifications,
+                    "timestamp": datetime.now().isoformat()
+                })
     except Exception as e:
         log_error(f"既存通知の取得に失敗: {e}")
 
@@ -307,15 +362,15 @@ async def notification_loop(listener):
                                if n.notification and n.notification.visual and n.notification.visual.bindings 
                                else [])
                     text_parts = [
-                        el.text
+                        el.text.strip()
                         for binding in bindings
                         for el in binding.get_text_elements()
-                        if el.text
+                        if el.text and el.text.strip()
                     ]
 
                     # 最初の要素をタイトル、残りを本文として扱う
                     title = text_parts[0] if text_parts else ""
-                    body = " ".join(text_parts[1:])
+                    body = " ".join(text_parts[1:]).strip()
 
                     # Electron側に送信するメッセージ
                     msg = {
