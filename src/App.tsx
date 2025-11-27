@@ -181,17 +181,19 @@ function App() {
   return (
     <ScrollArea className="h-dvh w-dvw" type="always">
       <main className="h-dvh w-dvw p-4">
-        <Drawer>
+        <Drawer direction="right">
           <DrawerTrigger className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             <span>Settings</span>
           </DrawerTrigger>
-          <DrawerContent className="max-h-[90vh] flex flex-col">
-            <DrawerHeader>
-              <DrawerTitle>設定</DrawerTitle>
-              <DrawerDescription>設定は自動で保存されます。</DrawerDescription>
-            </DrawerHeader>
-            <ScrollArea className="h-[calc(90vh-10rem)]" type="always">
+          <DrawerContent className="w-[90dvw]! sm:max-w-[90dvw]!">
+            <ScrollArea className="h-full" type="always">
+              <DrawerHeader>
+                <DrawerTitle>設定</DrawerTitle>
+                <DrawerDescription>
+                  設定は自動で保存されます。
+                </DrawerDescription>
+              </DrawerHeader>
               <div className="pl-4 pr-4 pb-4">
                 <FieldSet className="gap-6">
                   {/* 読ませるテンプレートの設定 */}
