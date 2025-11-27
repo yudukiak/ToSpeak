@@ -105,59 +105,43 @@ const processNotificationForSpeech = (log: ToastLog): string => {
           }
         };
 
-        // app が指定されている場合のチェック
-        let appMatches = false;
+        // 設定されたすべてのフィールドが一致する必要がある（AND条件）
+        // app が設定されている場合、app が一致する必要がある
         if (blocked.app) {
-          appMatches = matchString(log.app, blocked.app, blocked.appIsRegex);
+          if (!matchString(log.app, blocked.app, blocked.appIsRegex)) {
+            return false;
+          }
         }
 
-        // app_id が指定されている場合のチェック
-        let appIdMatches = false;
+        // app_id が設定されている場合、app_id が一致する必要がある
         if (blocked.app_id) {
-          appIdMatches = matchString(
-            log.app_id,
-            blocked.app_id,
-            blocked.appIdIsRegex
-          );
+          if (!matchString(log.app_id, blocked.app_id, blocked.appIdIsRegex)) {
+            return false;
+          }
         }
 
-        // app または app_id のいずれかがマッチする必要がある
-        const appOrAppIdMatches = appMatches || appIdMatches;
+        // title が設定されている場合、title が一致する必要がある
+        if (blocked.title) {
+          if (!matchString(log.title, blocked.title, blocked.titleIsRegex)) {
+            return false;
+          }
+        }
 
-        // app も app_id も指定されていない場合はスキップ
-        if (!blocked.app && !blocked.app_id) {
+        // text が設定されている場合、text が一致する必要がある
+        if (blocked.text) {
+          if (!matchString(log.text, blocked.text, blocked.textIsRegex)) {
+            return false;
+          }
+        }
+
+        // 少なくとも1つのフィールドが設定されている必要がある
+        // （すべてのフィールドが未設定の場合はブロックしない）
+        if (!blocked.app && !blocked.app_id && !blocked.title && !blocked.text) {
           return false;
         }
 
-        // title または text が指定されている場合のチェック
-        const hasTitleOrText = blocked.title || blocked.text;
-        if (hasTitleOrText) {
-          // app/app_id × (title OR text) の組み合わせチェック
-          let titleMatches = false;
-          let textMatches = false;
-
-          if (blocked.title) {
-            titleMatches = matchString(
-              log.title,
-              blocked.title,
-              blocked.titleIsRegex
-            );
-          }
-
-          if (blocked.text) {
-            textMatches = matchString(
-              log.text,
-              blocked.text,
-              blocked.textIsRegex
-            );
-          }
-
-          // app/app_id がマッチ かつ (title がマッチ OR text がマッチ)
-          return appOrAppIdMatches && (titleMatches || textMatches);
-        } else {
-          // title と text が指定されていない場合は、app/app_id のみでマッチ（既存の動作）
-          return appOrAppIdMatches;
-        }
+        // すべての設定されたフィールドが一致した場合、ブロックする
+        return true;
       })
     ) {
       return ""; // 除外アプリの場合は空文字を返す
