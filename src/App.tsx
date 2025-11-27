@@ -316,19 +316,19 @@ function App() {
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="音声を選択してください（読み上げ無効）" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {availableVoices.length > 0 ? (
-                              availableVoices.map((voice) => (
-                                <SelectItem key={voice} value={voice}>
-                                  {voice}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="" disabled>
-                                利用可能な音声がありません
-                              </SelectItem>
-                            )}
-                          </SelectContent>
+              <SelectContent>
+                {availableVoices.length > 0 ? (
+                  availableVoices.map((voice) => (
+                    <SelectItem key={voice} value={voice}>
+                      {voice}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    利用可能な音声がありません
+                  </div>
+                )}
+              </SelectContent>
                         </Select>
                         <FieldDescription>
                           {settings.voiceName
