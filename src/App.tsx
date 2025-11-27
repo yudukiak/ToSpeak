@@ -387,6 +387,32 @@ function App() {
                     </Field>
                   </FieldGroup>
 
+                  {/* 重複通知の無視時間設定 */}
+                  <FieldGroup>
+                    <FieldLegend>重複通知の無視</FieldLegend>
+                    <Field>
+                      <FieldLabel>無視時間（秒）: {settings.duplicateNotificationIgnoreSeconds ?? 30}</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          type="number"
+                          value={settings.duplicateNotificationIgnoreSeconds ?? 30}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value, 10);
+                            updateSettings({
+                              duplicateNotificationIgnoreSeconds: isNaN(value) || value < 0 ? 0 : value,
+                            });
+                          }}
+                          placeholder="30"
+                          className="w-full"
+                          min={0}
+                        />
+                        <FieldDescription>
+                          同じ内容の通知が指定秒数以内に送信された場合、読み上げをスキップします。0を指定すると無効（すべて読み上げ）です。
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                  </FieldGroup>
+
                   {/* 設定のインポート/エクスポート/リセット */}
                   <FieldGroup>
                     <FieldLegend>設定の管理</FieldLegend>

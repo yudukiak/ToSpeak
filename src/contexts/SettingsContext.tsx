@@ -25,6 +25,7 @@ export interface Settings {
   consecutiveCharMinLength?: number // 連続文字として認識する最小文字数（0または未指定の場合は無効、n文字以上を3文字に短縮）
   voiceName?: string // 使用するSAPI音声名（未指定の場合はデフォルト）
   volume?: number // 音量 (0〜100)
+  duplicateNotificationIgnoreSeconds?: number // 重複通知を無視する時間（秒、0または未指定の場合は無効）
 }
 
 interface SettingsContextType {
@@ -47,6 +48,7 @@ const defaultSettings: Settings = {
   consecutiveCharMinLength: 3, // 0は無効を意味する（n文字以上を3文字に短縮）
   voiceName: undefined, // 未指定の場合は読み上げ無効（プルダウンで選択が必要）
   volume: 20, // デフォルト音量20 (0〜100)
+  duplicateNotificationIgnoreSeconds: 30, // 重複通知を無視する時間（秒、デフォルト30秒、0は無効）
 }
 
 /**

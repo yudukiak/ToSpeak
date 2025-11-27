@@ -66,6 +66,18 @@ const setAvailableVoicesRef = {
 };
 const settingsRef = { current: null as Settings | null };
 
+// 最後に読み上げた通知の情報を保持（重複チェック用）
+interface LastSpokenNotification {
+  app?: string;
+  app_id?: string;
+  title?: string;
+  text?: string;
+  timestamp: number; // 読み上げ時刻（ミリ秒）
+}
+const lastSpokenNotificationRef = {
+  current: null as LastSpokenNotification | null,
+};
+
 // 通知データを加工して読み上げ用テキストを生成
 const processNotificationForSpeech = (log: ToastLog): string => {
   if (log.type === "notification") {
@@ -269,9 +281,45 @@ function setupIpcListener() {
 
       // 通知タイプの場合、自動的に読み上げ
       if (message.type === "notification") {
+        const settings = settingsRef.current;
+        const ignoreSeconds = settings?.duplicateNotificationIgnoreSeconds ?? 30;
+        
+        // 重複通知チェック（無視時間が0より大きい場合のみ）
+        if (ignoreSeconds > 0 && lastSpokenNotificationRef.current) {
+          const lastSpoken = lastSpokenNotificationRef.current;
+          const now = Date.now();
+          const timeDiff = (now - lastSpoken.timestamp) / 1000; // 秒単位
+          
+          // 指定秒数以内で、通知内容が同じかチェック
+          if (timeDiff <= ignoreSeconds) {
+            const isDuplicate =
+              lastSpoken.app === message.app &&
+              lastSpoken.app_id === message.app_id &&
+              lastSpoken.title === message.title &&
+              lastSpoken.text === message.text;
+            
+            if (isDuplicate) {
+              console.log(
+                `🔇 重複通知のため読み上げをスキップ: ${timeDiff.toFixed(1)}秒前の通知と同じ内容`,
+                message.app
+              );
+              return; // 読み上げをスキップ
+            }
+          }
+        }
+        
         const speechText = processNotificationForSpeech(message);
         console.log("🔊 読み上げテキスト生成:", speechText);
         if (speechText) {
+          // 最後に読み上げた通知の情報を保存
+          lastSpokenNotificationRef.current = {
+            app: message.app,
+            app_id: message.app_id,
+            title: message.title,
+            text: message.text,
+            timestamp: Date.now(),
+          };
+          
           // IPCで読み上げリクエストを送信
           if (typeof window !== "undefined" && window.ipcRenderer) {
             const ipcRenderer = window.ipcRenderer;
