@@ -27,7 +27,8 @@ export interface ToastLog {
     | "info"
     | "error"
     | "debug"
-    | "past_notifications";
+    | "past_notifications"
+    | "available_voices";
   app?: string;
   app_id?: string;
   title?: string;
@@ -37,6 +38,7 @@ export interface ToastLog {
   message?: string;
   source?: string;
   notifications?: PastNotification[]; // 過去の通知一覧
+  voices?: string[]; // 利用可能な音声リスト（available_voicesタイプの場合）
 }
 
 interface ToastLogContextType {
@@ -44,6 +46,8 @@ interface ToastLogContextType {
   clearLogs: () => void;
   speak: (text: string) => void;
   setVolume: (volume: number) => void;
+  availableVoices: string[]; // 利用可能な音声リスト
+  setVoice: (voiceName: string) => void; // 音声を設定
 }
 
 const ToastLogContext = createContext<ToastLogContextType | undefined>(
@@ -56,6 +60,9 @@ const setLogsRef = {
   current: null as
     | ((updater: (prevLogs: ToastLog[]) => ToastLog[]) => void)
     | null,
+};
+const setAvailableVoicesRef = {
+  current: null as ((voices: string[]) => void) | null,
 };
 const settingsRef = { current: null as Settings | null };
 
@@ -244,6 +251,16 @@ function setupIpcListener() {
       case "ready":
         console.log(`[${source}] ${msgText}`, message);
         break;
+      case "available_voices":
+        // 利用可能な音声リストを受け取る
+        if ((message as any).voices && Array.isArray((message as any).voices)) {
+          // setAvailableVoicesは後で定義されるため、ref経由で更新
+          if (setAvailableVoicesRef.current) {
+            setAvailableVoicesRef.current((message as any).voices);
+          }
+          console.log(`[${source}] 利用可能な音声: ${(message as any).voices.length}件`);
+        }
+        return; // UIには表示しない
       case "notification":
         console.log(
           `[${source}] Notification: ${message.app || "Unknown"} - ${
@@ -323,10 +340,12 @@ function setupIpcListener() {
 
 export function ToastLogProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<ToastLog[]>([]);
+  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const isSetupRef = useRef(false);
 
-  // 常に最新のsetLogsをrefに保存
+  // 常に最新のsetLogsとsetAvailableVoicesをrefに保存
   setLogsRef.current = setLogs;
+  setAvailableVoicesRef.current = setAvailableVoices;
 
   // 初回のみIPCセットアップ
   if (!isSetupRef.current) {
@@ -397,8 +416,18 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setVoice = (voiceName: string) => {
+    console.log("📤 [Renderer] set-voice:", voiceName);
+    if (typeof window !== "undefined" && window.ipcRenderer) {
+      const ipcRenderer = window.ipcRenderer;
+      ipcRenderer.send("set-voice", voiceName);
+    }
+  };
+
   return (
-    <ToastLogContext.Provider value={{ logs, clearLogs, speak, setVolume }}>
+    <ToastLogContext.Provider
+      value={{ logs, clearLogs, speak, setVolume, availableVoices, setVoice }}
+    >
       {children}
     </ToastLogContext.Provider>
   );

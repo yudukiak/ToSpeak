@@ -54,7 +54,7 @@ from winsdk.windows.ui.notifications import NotificationKinds
 # =================================================
 # 設定
 # =================================================
-TARGET_VOICE_NAME = "CeVIO"  # CeVIO を含む SAPI ボイス名
+TARGET_VOICE_NAME = ""  # デフォルトは空（音声未選択、読み上げ無効）
 VOLUME_LEVEL = 20            # 0〜100
 SAPI_SPEAK_ASYNC_FLAG = 1    # 非同期フラグ (SVSFDefault)
 VOLUME_MIN = 0               # 音量の最小値
@@ -63,6 +63,7 @@ VOLUME_MAX = 100             # 音量の最大値
 # グローバル変数（複数タスク間で共有）
 speaker = None
 current_volume = VOLUME_LEVEL
+current_voice_name = TARGET_VOICE_NAME  # 現在選択されている音声名（空の場合は読み上げ無効）
 main_loop = None  # メインイベントループへの参照
 
 # =================================================
@@ -102,44 +103,78 @@ def log_error(message: str):
     }
     send_json(log_msg)
 
-
-def log_info(message: str):
-    """情報ログをstdoutに出力（Electron側で受け取る）"""
-    log_msg = {
-        "type": "info",
-        "source": "toast_bridge",
-        "message": message,
-        "timestamp": datetime.now().isoformat()
-    }
-    send_json(log_msg)
-
 # =================================================
 # SAPI 初期化
 # =================================================
 
-def create_sapi_speaker(volume: int = VOLUME_LEVEL):
+def get_available_voices():
+    """
+    利用可能なSAPI音声のリストを取得する
+    
+    Returns:
+        音声名のリスト。エラー時は空のリストを返す
+    """
+    try:
+        sapi_speaker = win32com.client.Dispatch("SAPI.SpVoice")
+        voices = sapi_speaker.GetVoices()
+        voice_names = []
+        for voice in voices:
+            try:
+                desc = voice.GetDescription()
+                if desc:
+                    voice_names.append(desc)
+            except Exception:
+                # 個別の音声情報取得に失敗しても続行
+                continue
+        return voice_names
+    except Exception as e:
+        log_error(f"音声リスト取得エラー: {e}")
+        return []
+
+
+def create_sapi_speaker(volume: int = VOLUME_LEVEL, voice_name: str = None):
     """
     SAPIスピーカーオブジェクトを作成して設定する
     
     Args:
         volume: 音量 (0〜100)
+        voice_name: 使用する音声名（Noneまたは空文字列の場合はTARGET_VOICE_NAMEを使用、それも空の場合はNoneを返す）
     
     Returns:
-        SAPI.SpVoice オブジェクト、失敗時は None
+        SAPI.SpVoice オブジェクト、失敗時または音声名が空の場合は None
     """
     try:
+        # 使用する音声名を決定（引数が指定されていない場合はデフォルト値を使用）
+        target_name = voice_name if voice_name else TARGET_VOICE_NAME
+        
+        # 音声名が空の場合はNoneを返す（読み上げ無効）
+        if not target_name or target_name.strip() == "":
+            log_debug("音声名が設定されていません。読み上げは無効です。")
+            return None
+        
         sapi_speaker = win32com.client.Dispatch("SAPI.SpVoice")
         sapi_speaker.Rate = 0
         sapi_speaker.Volume = volume
 
         # 指定された音声を検索して設定
         voices = sapi_speaker.GetVoices()
+        voice_found = False
         for voice in voices:
-            desc = voice.GetDescription()
-            if TARGET_VOICE_NAME in desc:
-                sapi_speaker.Voice = voice
-                break
-        # 見つからない場合は標準音声を使用
+            try:
+                desc = voice.GetDescription()
+                # 音声名が完全一致、または部分一致する場合は使用
+                if desc == target_name or target_name in desc:
+                    sapi_speaker.Voice = voice
+                    voice_found = True
+                    log_debug(f"SAPI音声を設定: {desc}")
+                    break
+            except Exception:
+                # 個別の音声情報取得に失敗しても続行
+                continue
+        
+        # 見つからない場合は標準音声を使用（ログに記録）
+        if not voice_found:
+            log_debug(f"指定された音声 '{target_name}' が見つかりません。標準音声を使用します。")
 
         return sapi_speaker
     except Exception as e:
@@ -147,14 +182,100 @@ def create_sapi_speaker(volume: int = VOLUME_LEVEL):
         return None
 
 
-def setup_sapi():
+def setup_sapi(voice_name: str = None):
     """
     メインスレッドでSAPIを初期化
+    
+    Args:
+        voice_name: 使用する音声名（Noneの場合はTARGET_VOICE_NAMEを使用）
     
     Returns:
         SAPI.SpVoice オブジェクト、失敗時は None
     """
-    return create_sapi_speaker()
+    return create_sapi_speaker(voice_name=voice_name)
+
+
+async def change_voice(voice_name: str = None):
+    """
+    音声を変更する（非同期関数）
+    
+    グローバルのspeakerオブジェクトを新しい音声で再作成する
+    
+    Args:
+        voice_name: 変更する音声名（Noneまたは空文字列の場合は読み上げ無効）
+    
+    Note:
+        COMオブジェクトはスレッドセーフではないため、
+        メインスレッドで実行する必要がある
+    """
+    global speaker, current_voice_name, current_volume
+    
+    try:
+        # Noneまたは空文字列の場合は空文字列に統一
+        target_voice = voice_name if voice_name and voice_name.strip() else ""
+        previous_voice = current_voice_name
+        current_voice_name = target_voice
+        
+        if target_voice:
+            log_debug(f"change_voice: 音声を変更します: {target_voice}")
+        else:
+            log_debug("change_voice: 音声を無効化します（読み上げ停止）")
+        
+        # 新しい音声でspeakerを再作成（空の場合はNoneが返される）
+        new_speaker = create_sapi_speaker(volume=current_volume, voice_name=target_voice)
+        if new_speaker:
+            speaker = new_speaker
+            send_json({
+                "type": "info",
+                "source": "toast_bridge",
+                "title": "音声を変更しました",
+                "message": target_voice,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            # 音声変更成功時、Electron側に情報を送信し、読み上げる
+            # ただし、起動時の初回設定時（previous_voiceが空）は読み上げのみ、手動変更時はメッセージ送信+読み上げ
+            if previous_voice and previous_voice.strip():
+                # 手動で音声を変更した場合
+                """
+                send_json({
+                    "type": "info",
+                    "source": "toast_bridge",
+                    "title": "音声を変更しました",
+                    "message": target_voice,
+                    "timestamp": datetime.now().isoformat()
+                })
+                """
+            
+            # 読み上げテキストを生成して読み上げ
+            speech_text = f"音声を変更しました: {target_voice}"
+            await speak_text(speech_text)
+        else:
+            speaker = None
+            if target_voice:
+                log_error(f"音声の変更に失敗しました: {target_voice}")
+            else:
+                # 音声が空文字列で設定された場合（読み上げ無効化）
+                if previous_voice and previous_voice.strip():
+                    # 以前音声が設定されていた場合はメッセージ送信
+                    send_json({
+                        "type": "info",
+                        "source": "toast_bridge",
+                        "title": "音声設定",
+                        "message": "音声が設定されていません。読み上げは無効です。プルダウンで音声を選択してください。",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                send_json({
+                    "type": "info",
+                    "source": "toast_bridge",
+                    "title": "音声が無効化されました",
+                    "message": "読み上げは行われません。",
+                    "timestamp": datetime.now().isoformat()
+                })
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        log_error(f"音声変更エラー: {e}\n{error_detail}")
 
 # =================================================
 # 読み上げ処理
@@ -338,16 +459,21 @@ async def speak_text(text: str):
         COMオブジェクト（SAPI.SpVoice）はスレッドセーフではないため、
         メインスレッドで作成したspeakerオブジェクトを使用する必要がある
     """
-    global speaker, current_volume
+    global speaker, current_volume, current_voice_name
     
     # テキストが空の場合は処理を中断
-    if not text:
+    if not text or not text.strip():
         log_debug("speak_text: テキストが空です")
         return
     
-    # speakerが初期化されていない場合はエラー
+    # 音声が設定されていない場合はスキップ（読み上げ無効）
+    if not current_voice_name or current_voice_name.strip() == "":
+        log_debug("speak_text: 音声が設定されていないためスキップ（読み上げ無効）")
+        return
+    
+    # speakerが初期化されていない場合はスキップ
     if not speaker:
-        log_error("speak_text: speakerが初期化されていません")
+        log_debug("speak_text: speakerが初期化されていないためスキップ")
         return
     
     try:
@@ -634,6 +760,19 @@ def blocking_read():
                         log_debug(f"音量設定: {clamped_volume}")
                     except Exception as e:
                         log_error(f"音量設定エラー: {e}")
+                
+                elif msg_type == "set_voice":
+                    # 音声設定（非同期処理）
+                    voice_name = msg.get("voice_name", None)
+                    # 空文字列の場合はNoneに変換（デフォルト音声を使用）
+                    if voice_name == "":
+                        voice_name = None
+                    if main_loop:
+                        log_debug(f"音声変更リクエスト: voice_name={voice_name or 'デフォルト（CeVIO）'}")
+                        # メインスレッドで音声を変更する必要がある
+                        asyncio.run_coroutine_threadsafe(change_voice(voice_name), main_loop)
+                    elif not main_loop:
+                        log_error("main_loopがNoneです")
             
             except json.JSONDecodeError:
                 continue
@@ -692,11 +831,38 @@ async def main():
         log_debug(f"e2kをインストールするには: {sys.executable} -m pip install e2k")
         log_debug(f"または: py -m pip install e2k (Pythonランチャーを使用)")
     
+    # 利用可能な音声リストを取得して送信
+    available_voices = get_available_voices()
+    send_json({
+        "type": "available_voices",
+        "source": "toast_bridge",
+        "voices": available_voices,
+        "timestamp": datetime.now().isoformat(),
+    })
+    log_debug(f"利用可能な音声数: {len(available_voices)}")
+
     # SAPI初期化（メインスレッドで）
-    speaker = setup_sapi()
-    if not speaker:
-        log_error("SAPI初期化に失敗しました")
-        sys.exit(1)
+    # 起動時は音声設定を待機する（Electron側から送られてくるまで待機）
+    # 音声名が空の場合はspeakerはNoneのまま（読み上げ無効）
+    # 起動時にはメッセージを送信せず、Electron側からset_voiceコマンドが送られてきたときに処理する
+    if current_voice_name and current_voice_name.strip():
+        speaker = setup_sapi(voice_name=current_voice_name)
+        if not speaker:
+            log_error(f"SAPI初期化に失敗しました（音声名: {current_voice_name}）")
+            # エラーでも続行（読み上げ無効の状態で動作）
+            speaker = None
+        else:
+            send_json({
+                "type": "info",
+                "source": "toast_bridge",
+                "title": "SAPI初期化完了",
+                "message": f"音声: {current_voice_name}",
+                "timestamp": datetime.now().isoformat()
+            })
+    else:
+        # 起動時は音声設定を待機するだけ（メッセージ送信なし）
+        log_debug("音声が設定されていません。Electron側からの音声設定を待機中...")
+        speaker = None
 
     # 通知リスナーを取得
     listener = await get_listener()

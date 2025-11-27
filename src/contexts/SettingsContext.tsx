@@ -23,6 +23,7 @@ export interface Settings {
   blockedApps: BlockedApp[] // 読ませないアプリのリスト
   maxTextLength?: number // 読み上げテキストの最大文字数（0または未指定の場合は無制限）
   consecutiveCharMinLength?: number // 連続文字として認識する最小文字数（0または未指定の場合は無効、n文字以上を3文字に短縮）
+  voiceName?: string // 使用するSAPI音声名（未指定の場合はデフォルト）
 }
 
 interface SettingsContextType {
@@ -40,6 +41,7 @@ const defaultSettings: Settings = {
   blockedApps: [],
   maxTextLength: 100, // 0は無制限を意味する（n文字以上で「以下省略」にする）
   consecutiveCharMinLength: 3, // 0は無効を意味する（n文字以上を3文字に短縮）
+  voiceName: undefined, // 未指定の場合は読み上げ無効（プルダウンで選択が必要）
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)

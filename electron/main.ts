@@ -307,6 +307,52 @@ function setVolume(volume: number) {
   }
 }
 
+/**
+ * 音声をPythonプロセスに送信して設定する
+ */
+function setVoice(voiceName: string) {
+  if (!toastBridgeProcess || !toastBridgeProcess.stdin) {
+    const errorMsg = 'Toast Bridge: 読み上げプロセスが起動していません'
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+    }
+    return
+  }
+
+  if (toastBridgeProcess.stdin.destroyed) {
+    const errorMsg = 'Toast Bridge: stdinが破棄されています'
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+    }
+    return
+  }
+
+  const message = {
+    type: 'set_voice',
+    voice_name: voiceName
+  }
+
+  try {
+    const jsonMessage = JSON.stringify(message) + '\n'
+    const success = toastBridgeProcess.stdin.write(jsonMessage, 'utf-8')
+    if (!success) {
+      const warnMsg = 'Toast Bridge: stdin.writeがfalseを返しました'
+      console.warn(warnMsg)
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('console-log', { level: 'warn', source: 'main', message: warnMsg })
+      }
+    }
+  } catch (error) {
+    const errorMsg = `Toast Bridge: 音声設定コマンド送信エラー ${error}`
+    console.error(errorMsg)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('console-log', { level: 'error', source: 'main', message: errorMsg })
+    }
+  }
+}
+
 // IPCハンドラー: レンダラーから読み上げリクエストを受け取る
 ipcMain.on('speak-text', (_event, text: string) => {
   const logMsg = `IPC受信: speak-text ${text}`
@@ -320,6 +366,11 @@ ipcMain.on('speak-text', (_event, text: string) => {
 // IPCハンドラー: レンダラーから音量設定リクエストを受け取る
 ipcMain.on('set-volume', (_event, volume: number) => {
   setVolume(volume)
+})
+
+// IPCハンドラー: レンダラーから音声設定リクエストを受け取る
+ipcMain.on('set-voice', (_event, voiceName: string) => {
+  setVoice(voiceName)
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

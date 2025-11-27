@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Bell,
   AlertCircle,
@@ -62,11 +62,18 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToastLogs, PastNotification } from "./contexts/ToastLogContext";
 import "./App.css";
 
 function App() {
-  const { logs, setVolume } = useToastLogs();
+  const { logs, setVolume, availableVoices, setVoice } = useToastLogs();
   const [volume, setVolumeState] = useState(20); // デフォルト音量20
   const {
     settings,
@@ -90,6 +97,22 @@ function App() {
   const [newBlockedTitleIsRegex, setNewBlockedTitleIsRegex] = useState(false);
   const [newBlockedText, setNewBlockedText] = useState("");
   const [newBlockedTextIsRegex, setNewBlockedTextIsRegex] = useState(false);
+
+  // 起動時に保存された音声設定を適用（初回のみ）
+  const voiceAppliedRef = useRef(false);
+  useEffect(() => {
+    // 既に適用済みの場合はスキップ
+    if (voiceAppliedRef.current) {
+      return;
+    }
+    
+    // 音声リストが読み込まれ、音声設定がある場合のみ適用
+    if (settings.voiceName && availableVoices.length > 0) {
+      // 利用可能な音声リストが読み込まれたら、保存された音声設定を適用
+      setVoice(settings.voiceName);
+      voiceAppliedRef.current = true;
+    }
+  }, [settings.voiceName, availableVoices.length, setVoice]);
 
   // ログタイプに応じたスタイル、アイコン、タイトルを取得
   const getLogConfig = (log: { type: string; app?: string }) => {
@@ -264,6 +287,48 @@ function App() {
                         ))}
                       </div>
                     )}
+                  </FieldGroup>
+
+                  {/* 音声設定 */}
+                  <FieldGroup>
+                    <FieldLegend>音声設定</FieldLegend>
+                    <Field>
+                      <FieldLabel>音声</FieldLabel>
+                      <FieldContent>
+                        <Select
+                          value={settings.voiceName || ""}
+                          onValueChange={(value) => {
+                            const voiceName = value || undefined;
+                            updateSettings({ voiceName });
+                            // Python側に音声変更を送信
+                            // 空文字列の場合は読み上げ無効、音声名が指定された場合はその音声を使用
+                            setVoice(value || "");
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="音声を選択してください（読み上げ無効）" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableVoices.length > 0 ? (
+                              availableVoices.map((voice) => (
+                                <SelectItem key={voice} value={voice}>
+                                  {voice}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>
+                                利用可能な音声がありません
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                          {settings.voiceName
+                            ? `読み上げ音声: ${settings.voiceName}（読み上げ有効）`
+                            : "読み上げに使用する音声を選択してください。音声を選択すると読み上げが開始されます。"}
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
                   </FieldGroup>
 
                   {/* 音量設定 */}
