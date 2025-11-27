@@ -208,7 +208,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `toast-speak-settings-${new Date().toISOString().split('T')[0]}.json`
+      // ローカル時刻で日付を取得（YYYY-MM-DD形式）
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+      a.download = `toast-speak-settings-${dateStr}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
