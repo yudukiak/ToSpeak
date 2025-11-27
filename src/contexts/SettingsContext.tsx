@@ -49,6 +49,78 @@ const defaultSettings: Settings = {
   volume: 20, // デフォルト音量20 (0〜100)
 }
 
+/**
+ * BlockedAppから冗長なフィールドを削除する
+ * 未設定のフィールドとその対応するIsRegexフィールドを除外する
+ */
+function optimizeBlockedApp(blockedApp: BlockedApp): Partial<BlockedApp> {
+  const optimized: Partial<BlockedApp> = {}
+  
+  // appが設定されている場合のみ、appとappIsRegexを追加
+  if (blockedApp.app !== undefined && blockedApp.app !== null && blockedApp.app !== '') {
+    optimized.app = blockedApp.app
+    if (blockedApp.appIsRegex !== undefined) {
+      optimized.appIsRegex = blockedApp.appIsRegex
+    }
+  }
+  
+  // app_idが設定されている場合のみ、app_idとappIdIsRegexを追加
+  if (blockedApp.app_id !== undefined && blockedApp.app_id !== null && blockedApp.app_id !== '') {
+    optimized.app_id = blockedApp.app_id
+    if (blockedApp.appIdIsRegex !== undefined) {
+      optimized.appIdIsRegex = blockedApp.appIdIsRegex
+    }
+  }
+  
+  // titleが設定されている場合のみ、titleとtitleIsRegexを追加
+  if (blockedApp.title !== undefined && blockedApp.title !== null && blockedApp.title !== '') {
+    optimized.title = blockedApp.title
+    if (blockedApp.titleIsRegex !== undefined) {
+      optimized.titleIsRegex = blockedApp.titleIsRegex
+    }
+  }
+  
+  // textが設定されている場合のみ、textとtextIsRegexを追加
+  if (blockedApp.text !== undefined && blockedApp.text !== null && blockedApp.text !== '') {
+    optimized.text = blockedApp.text
+    if (blockedApp.textIsRegex !== undefined) {
+      optimized.textIsRegex = blockedApp.textIsRegex
+    }
+  }
+  
+  return optimized
+}
+
+/**
+ * Settingsから冗長なフィールドを削除して最適化する
+ */
+function optimizeSettings(settings: Settings): Partial<Settings> {
+  const optimized: Partial<Settings> = {
+    speechTemplate: settings.speechTemplate,
+    replacements: settings.replacements,
+    blockedApps: settings.blockedApps.map(optimizeBlockedApp),
+  }
+  
+  // オプショナルフィールドは、デフォルト値と異なる場合のみ追加
+  if (settings.maxTextLength !== undefined && settings.maxTextLength !== defaultSettings.maxTextLength) {
+    optimized.maxTextLength = settings.maxTextLength
+  }
+  
+  if (settings.consecutiveCharMinLength !== undefined && settings.consecutiveCharMinLength !== defaultSettings.consecutiveCharMinLength) {
+    optimized.consecutiveCharMinLength = settings.consecutiveCharMinLength
+  }
+  
+  if (settings.voiceName !== undefined && settings.voiceName !== null && settings.voiceName !== '') {
+    optimized.voiceName = settings.voiceName
+  }
+  
+  if (settings.volume !== undefined && settings.volume !== defaultSettings.volume) {
+    optimized.volume = settings.volume
+  }
+  
+  return optimized
+}
+
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -68,8 +140,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateSettings = (newSettings: Partial<Settings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings }
-      // ローカルストレージに保存
-      localStorage.setItem('toast-speak-settings', JSON.stringify(updated))
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
       return updated
     })
   }
@@ -80,7 +153,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         ...prev,
         replacements: [...prev.replacements, replacement],
       }
-      localStorage.setItem('toast-speak-settings', JSON.stringify(updated))
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
       return updated
     })
   }
@@ -91,7 +166,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         ...prev,
         replacements: prev.replacements.filter((_, i) => i !== index),
       }
-      localStorage.setItem('toast-speak-settings', JSON.stringify(updated))
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
       return updated
     })
   }
@@ -102,7 +179,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         ...prev,
         blockedApps: [...prev.blockedApps, blockedApp],
       }
-      localStorage.setItem('toast-speak-settings', JSON.stringify(updated))
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
       return updated
     })
   }
@@ -113,14 +192,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         ...prev,
         blockedApps: prev.blockedApps.filter((_, i) => i !== index),
       }
-      localStorage.setItem('toast-speak-settings', JSON.stringify(updated))
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
       return updated
     })
   }
 
   const exportSettings = () => {
     try {
-      const settingsJson = JSON.stringify(settings, null, 2)
+      // 最適化してエクスポート（冗長なフィールドを削除）
+      const optimized = optimizeSettings(settings)
+      const settingsJson = JSON.stringify(optimized, null, 2)
       const blob = new Blob([settingsJson], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -151,7 +234,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             blockedApps: importedSettings.blockedApps || defaultSettings.blockedApps,
           }
           setSettings(mergedSettings)
-          localStorage.setItem('toast-speak-settings', JSON.stringify(mergedSettings))
+          // インポート後も最適化して保存
+          const optimized = optimizeSettings(mergedSettings)
+          localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
           resolve()
         } catch (error) {
           console.error('設定のインポートに失敗しました:', error)
@@ -167,7 +252,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const resetSettings = () => {
     setSettings(defaultSettings)
-    localStorage.setItem('toast-speak-settings', JSON.stringify(defaultSettings))
+    // リセット時も最適化して保存
+    const optimized = optimizeSettings(defaultSettings)
+    localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
   }
 
   return (
