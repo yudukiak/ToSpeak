@@ -169,8 +169,9 @@ function startToastBridge() {
             }, 100)
           }
           
-          // すべてのメッセージをReact側に転送
-          if (win && !win.isDestroyed()) {
+          // debugタイプ以外のメッセージをReact側に転送
+          // debugタイプはコンソールのみで、UIには表示しない
+          if (message.type !== 'debug' && win && !win.isDestroyed()) {
             win.webContents.send('toast-log', message)
           }
         } catch (e) {

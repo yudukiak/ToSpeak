@@ -78,53 +78,79 @@ const processNotificationForSpeech = (log: ToastLog): string => {
     // 除外アプリのチェック
     if (
       settings.blockedApps.some((blocked: BlockedApp) => {
-        // アプリ名のチェック
+        // 文字列マッチング関数（正規表現対応）
+        const matchString = (
+          value: string | undefined,
+          pattern: string | undefined,
+          isRegex: boolean | undefined
+        ): boolean => {
+          if (!pattern || !value) return false;
+          if (isRegex) {
+            try {
+              const regex = new RegExp(pattern);
+              return regex.test(value);
+            } catch (e) {
+              // 正規表現が無効な場合は通常の文字列マッチにフォールバック
+              return value === pattern;
+            }
+          } else {
+            return value === pattern;
+          }
+        };
+
+        // app が指定されている場合のチェック
+        let appMatches = false;
         if (blocked.app) {
-          if (blocked.appIsRegex) {
-            // 正規表現でマッチ
-            try {
-              const regex = new RegExp(blocked.app);
-              if (log.app && regex.test(log.app)) {
-                return true;
-              }
-            } catch (e) {
-              // 正規表現が無効な場合は通常の文字列マッチにフォールバック
-              if (log.app === blocked.app) {
-                return true;
-              }
-            }
-          } else {
-            // 通常の文字列マッチ
-            if (log.app === blocked.app) {
-              return true;
-            }
-          }
+          appMatches = matchString(log.app, blocked.app, blocked.appIsRegex);
         }
 
-        // アプリIDのチェック
+        // app_id が指定されている場合のチェック
+        let appIdMatches = false;
         if (blocked.app_id) {
-          if (blocked.appIdIsRegex) {
-            // 正規表現でマッチ
-            try {
-              const regex = new RegExp(blocked.app_id);
-              if (log.app_id && regex.test(log.app_id)) {
-                return true;
-              }
-            } catch (e) {
-              // 正規表現が無効な場合は通常の文字列マッチにフォールバック
-              if (log.app_id === blocked.app_id) {
-                return true;
-              }
-            }
-          } else {
-            // 通常の文字列マッチ
-            if (log.app_id === blocked.app_id) {
-              return true;
-            }
-          }
+          appIdMatches = matchString(
+            log.app_id,
+            blocked.app_id,
+            blocked.appIdIsRegex
+          );
         }
 
-        return false;
+        // app または app_id のいずれかがマッチする必要がある
+        const appOrAppIdMatches = appMatches || appIdMatches;
+
+        // app も app_id も指定されていない場合はスキップ
+        if (!blocked.app && !blocked.app_id) {
+          return false;
+        }
+
+        // title または text が指定されている場合のチェック
+        const hasTitleOrText = blocked.title || blocked.text;
+        if (hasTitleOrText) {
+          // app/app_id × (title OR text) の組み合わせチェック
+          let titleMatches = false;
+          let textMatches = false;
+
+          if (blocked.title) {
+            titleMatches = matchString(
+              log.title,
+              blocked.title,
+              blocked.titleIsRegex
+            );
+          }
+
+          if (blocked.text) {
+            textMatches = matchString(
+              log.text,
+              blocked.text,
+              blocked.textIsRegex
+            );
+          }
+
+          // app/app_id がマッチ かつ (title がマッチ OR text がマッチ)
+          return appOrAppIdMatches && (titleMatches || textMatches);
+        } else {
+          // title と text が指定されていない場合は、app/app_id のみでマッチ（既存の動作）
+          return appOrAppIdMatches;
+        }
       })
     ) {
       return ""; // 除外アプリの場合は空文字を返す
@@ -155,12 +181,31 @@ const processNotificationForSpeech = (log: ToastLog): string => {
       }
     });
 
+    // 連続文字の短縮処理
+    const consecutiveMinLength = settings.consecutiveCharMinLength || 0;
+    if (consecutiveMinLength > 0) {
+      // 同じ文字がn文字以上連続している場合、3文字に短縮
+      // 正規表現: (.)\1{n-1,} で同じ文字がn文字以上連続している箇所を検出
+      const regex = new RegExp(`(.)\\1{${consecutiveMinLength - 1},}`, "g");
+      text = text.replace(regex, (match) => {
+        // 最初の文字を取得して、3文字分だけ繰り返す
+        const char = match[0];
+        return char.repeat(3);
+      });
+    }
+
     // 連続する空白や区切り文字を整理
     text = text.replace(/\s+/g, " ").trim();
     // 連続する区切り文字（、や、）を1つに
     text = text.replace(/[、，,]+/g, "、").trim();
     // 先頭と末尾の区切り文字を削除
     text = text.replace(/^[、，,]+|[、，,]+$/g, "").trim();
+
+    // 最大文字数チェック
+    const maxLength = settings.maxTextLength || 0;
+    if (maxLength > 0 && text.length > maxLength) {
+      text = text.substring(0, maxLength) + "以下省略";
+    }
 
     return text || "通知があります";
   }
@@ -301,6 +346,8 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
             speechTemplate: parsed.speechTemplate || "{app}、{title}、{text}",
             replacements: parsed.replacements || [],
             blockedApps: parsed.blockedApps || [],
+            maxTextLength: parsed.maxTextLength !== undefined ? parsed.maxTextLength : 0,
+            consecutiveCharMinLength: parsed.consecutiveCharMinLength !== undefined ? parsed.consecutiveCharMinLength : 0,
           };
         } else {
           // デフォルト設定を使用
@@ -308,6 +355,8 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
             speechTemplate: "{app}、{title}、{text}",
             replacements: [],
             blockedApps: [],
+            maxTextLength: 0,
+            consecutiveCharMinLength: 0,
           };
         }
       } catch {
@@ -316,6 +365,8 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
           speechTemplate: "{app}、{title}、{text}",
           replacements: [],
           blockedApps: [],
+          maxTextLength: 0,
+          consecutiveCharMinLength: 0,
         };
       }
     };

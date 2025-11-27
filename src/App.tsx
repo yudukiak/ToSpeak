@@ -5,11 +5,11 @@ import {
   CheckCircle2,
   Info,
   HelpCircle,
-  Menu,
   Settings,
   History,
   Trash2,
   Plus,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +86,10 @@ function App() {
   const [newBlockedAppId, setNewBlockedAppId] = useState("");
   const [newBlockedAppIsRegex, setNewBlockedAppIsRegex] = useState(false);
   const [newBlockedAppIdIsRegex, setNewBlockedAppIdIsRegex] = useState(false);
+  const [newBlockedTitle, setNewBlockedTitle] = useState("");
+  const [newBlockedTitleIsRegex, setNewBlockedTitleIsRegex] = useState(false);
+  const [newBlockedText, setNewBlockedText] = useState("");
+  const [newBlockedTextIsRegex, setNewBlockedTextIsRegex] = useState(false);
 
   // ログタイプに応じたスタイル、アイコン、タイトルを取得
   const getLogConfig = (log: { type: string; app?: string }) => {
@@ -280,6 +284,58 @@ function App() {
                     </Field>
                   </FieldGroup>
 
+                  {/* 最大文字数設定 */}
+                  <FieldGroup>
+                    <FieldLegend>読み上げテキストの最大文字数</FieldLegend>
+                    <Field>
+                      <FieldLabel>最大文字数</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          type="number"
+                          value={settings.maxTextLength || 0}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value, 10);
+                            updateSettings({
+                              maxTextLength: isNaN(value) || value < 0 ? 0 : value,
+                            });
+                          }}
+                          placeholder="0（無制限）"
+                          className="w-full"
+                          min={0}
+                        />
+                        <FieldDescription>
+                          読み上げテキストがこの文字数を超える場合、「以下省略」に置き換えられます。0を指定すると無制限です。
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                  </FieldGroup>
+
+                  {/* 連続文字短縮設定 */}
+                  <FieldGroup>
+                    <FieldLegend>連続文字の短縮</FieldLegend>
+                    <Field>
+                      <FieldLabel>連続文字の短縮設定</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          type="number"
+                          value={settings.consecutiveCharMinLength || 0}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value, 10);
+                            updateSettings({
+                              consecutiveCharMinLength: isNaN(value) || value < 0 ? 0 : value,
+                            });
+                          }}
+                          placeholder="0（無効）"
+                          className="w-full"
+                          min={0}
+                        />
+                        <FieldDescription>
+                          同じ文字がn文字以上連続している場合、3文字に短縮されます。例: "=========" (9文字) → n=3 の場合 "===" (3文字) になります。0を指定すると無効です。
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                  </FieldGroup>
+
                   {/* 読ませないアプリの設定 */}
                   <FieldGroup>
                     <FieldLegend>読ませないアプリ</FieldLegend>
@@ -334,6 +390,52 @@ function App() {
                                 </label>
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={newBlockedTitle}
+                                onChange={(e) =>
+                                  setNewBlockedTitle(e.target.value)
+                                }
+                                placeholder="タイトル（app または app_id と組み合わせ）"
+                                className="flex-1"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={newBlockedTitleIsRegex}
+                                  onCheckedChange={setNewBlockedTitleIsRegex}
+                                  id="title-regex"
+                                />
+                                <label
+                                  htmlFor="title-regex"
+                                  className="text-sm text-muted-foreground whitespace-nowrap"
+                                >
+                                  正規表現
+                                </label>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={newBlockedText}
+                                onChange={(e) =>
+                                  setNewBlockedText(e.target.value)
+                                }
+                                placeholder="本文（app または app_id と組み合わせ）"
+                                className="flex-1"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={newBlockedTextIsRegex}
+                                  onCheckedChange={setNewBlockedTextIsRegex}
+                                  id="text-regex"
+                                />
+                                <label
+                                  htmlFor="text-regex"
+                                  className="text-sm text-muted-foreground whitespace-nowrap"
+                                >
+                                  正規表現
+                                </label>
+                              </div>
+                            </div>
                           </div>
                           <Button
                             type="button"
@@ -344,11 +446,19 @@ function App() {
                                   app_id: newBlockedAppId || undefined,
                                   appIsRegex: newBlockedAppIsRegex,
                                   appIdIsRegex: newBlockedAppIdIsRegex,
+                                  title: newBlockedTitle || undefined,
+                                  titleIsRegex: newBlockedTitleIsRegex,
+                                  text: newBlockedText || undefined,
+                                  textIsRegex: newBlockedTextIsRegex,
                                 });
                                 setNewBlockedApp("");
                                 setNewBlockedAppId("");
                                 setNewBlockedAppIsRegex(false);
                                 setNewBlockedAppIdIsRegex(false);
+                                setNewBlockedTitle("");
+                                setNewBlockedTitleIsRegex(false);
+                                setNewBlockedText("");
+                                setNewBlockedTextIsRegex(false);
                               }
                             }}
                             className="w-full"
@@ -358,7 +468,7 @@ function App() {
                           </Button>
                         </div>
                         <FieldDescription>
-                          アプリ名またはアプリIDのいずれかを指定してください。正規表現を使用する場合は、スイッチをONにしてください。
+                          アプリ名またはアプリIDのいずれかを指定してください。タイトルや本文を指定すると、app/app_id × (title OR text) の組み合わせで除外されます。正規表現を使用する場合は、スイッチをONにしてください。
                         </FieldDescription>
                       </FieldContent>
                     </Field>
@@ -384,6 +494,26 @@ function App() {
                                 <div>
                                   ID: {blockedApp.app_id}
                                   {blockedApp.appIdIsRegex && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      (正規表現)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {blockedApp.title && (
+                                <div>
+                                  タイトル: {blockedApp.title}
+                                  {blockedApp.titleIsRegex && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      (正規表現)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {blockedApp.text && (
+                                <div>
+                                  本文: {blockedApp.text}
+                                  {blockedApp.textIsRegex && (
                                     <span className="ml-2 text-xs text-muted-foreground">
                                       (正規表現)
                                     </span>
@@ -534,7 +664,7 @@ function App() {
                         <span className="font-semibold">{title}</span>
                         <Popover>
                           <PopoverTrigger className="ml-auto cursor-pointer">
-                            <Menu className="h-5 w-5 ml-auto cursor-pointer" />
+                            <FileText className="h-5 w-5 ml-auto cursor-pointer" />
                           </PopoverTrigger>
                           <PopoverContent className="w-auto" align="end">
                             <div className="grid gap-4">
@@ -542,12 +672,13 @@ function App() {
                                 { label: "app", value: app },
                                 { label: "app_id", value: app_id },
                                 { label: "title", value: title },
+                                { label: "text", value: text },
                               ].map((item, index) => (
                                 <div key={index} className="space-y-2">
-                                  <h3 className="text-lg font-bold">
+                                  <h3 className="text-sm font-bold">
                                     {item.label}
                                   </h3>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
                                     {item.value}
                                   </p>
                                 </div>

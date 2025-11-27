@@ -11,12 +11,18 @@ export interface BlockedApp {
   app_id?: string
   appIsRegex?: boolean // アプリ名を正規表現として扱うか
   appIdIsRegex?: boolean // アプリIDを正規表現として扱うか
+  title?: string // タイトル（app または app_id と組み合わせて使用）
+  titleIsRegex?: boolean // タイトルを正規表現として扱うか
+  text?: string // 本文（app または app_id と組み合わせて使用）
+  textIsRegex?: boolean // 本文を正規表現として扱うか
 }
 
 export interface Settings {
   speechTemplate: string // 読ませるテンプレート（例: "{app} {title} {text}"）
   replacements: Replacement[] // 変換リスト
   blockedApps: BlockedApp[] // 読ませないアプリのリスト
+  maxTextLength?: number // 読み上げテキストの最大文字数（0または未指定の場合は無制限）
+  consecutiveCharMinLength?: number // 連続文字として認識する最小文字数（0または未指定の場合は無効、n文字以上を3文字に短縮）
 }
 
 interface SettingsContextType {
@@ -32,6 +38,8 @@ const defaultSettings: Settings = {
   speechTemplate: '{app}、{title}、{text}',
   replacements: [],
   blockedApps: [],
+  maxTextLength: 100, // 0は無制限を意味する（n文字以上で「以下省略」にする）
+  consecutiveCharMinLength: 3, // 0は無効を意味する（n文字以上を3文字に短縮）
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
