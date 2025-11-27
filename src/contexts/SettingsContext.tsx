@@ -24,6 +24,7 @@ export interface Settings {
   maxTextLength?: number // 読み上げテキストの最大文字数（0または未指定の場合は無制限）
   consecutiveCharMinLength?: number // 連続文字として認識する最小文字数（0または未指定の場合は無効、n文字以上を3文字に短縮）
   voiceName?: string // 使用するSAPI音声名（未指定の場合はデフォルト）
+  volume?: number // 音量 (0〜100)
 }
 
 interface SettingsContextType {
@@ -33,6 +34,9 @@ interface SettingsContextType {
   removeReplacement: (index: number) => void
   addBlockedApp: (blockedApp: BlockedApp) => void
   removeBlockedApp: (index: number) => void
+  exportSettings: () => void
+  importSettings: (file: File) => Promise<void>
+  resetSettings: () => void
 }
 
 const defaultSettings: Settings = {
@@ -42,6 +46,7 @@ const defaultSettings: Settings = {
   maxTextLength: 100, // 0は無制限を意味する（n文字以上で「以下省略」にする）
   consecutiveCharMinLength: 3, // 0は無効を意味する（n文字以上を3文字に短縮）
   voiceName: undefined, // 未指定の場合は読み上げ無効（プルダウンで選択が必要）
+  volume: 20, // デフォルト音量20 (0〜100)
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -113,6 +118,58 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const exportSettings = () => {
+    try {
+      const settingsJson = JSON.stringify(settings, null, 2)
+      const blob = new Blob([settingsJson], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `toast-speak-settings-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('設定のエクスポートに失敗しました:', error)
+      throw error
+    }
+  }
+
+  const importSettings = async (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const importedSettings = JSON.parse(e.target?.result as string)
+          // デフォルト設定とマージして、型安全性を保つ
+          const mergedSettings: Settings = {
+            ...defaultSettings,
+            ...importedSettings,
+            // 配列は完全に置き換える
+            replacements: importedSettings.replacements || defaultSettings.replacements,
+            blockedApps: importedSettings.blockedApps || defaultSettings.blockedApps,
+          }
+          setSettings(mergedSettings)
+          localStorage.setItem('toast-speak-settings', JSON.stringify(mergedSettings))
+          resolve()
+        } catch (error) {
+          console.error('設定のインポートに失敗しました:', error)
+          reject(new Error('設定ファイルの形式が正しくありません'))
+        }
+      }
+      reader.onerror = () => {
+        reject(new Error('ファイルの読み込みに失敗しました'))
+      }
+      reader.readAsText(file)
+    })
+  }
+
+  const resetSettings = () => {
+    setSettings(defaultSettings)
+    localStorage.setItem('toast-speak-settings', JSON.stringify(defaultSettings))
+  }
+
   return (
     <SettingsContext.Provider
       value={{
@@ -122,6 +179,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         removeReplacement,
         addBlockedApp,
         removeBlockedApp,
+        exportSettings,
+        importSettings,
+        resetSettings,
       }}
     >
       {children}

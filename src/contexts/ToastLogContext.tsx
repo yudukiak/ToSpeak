@@ -189,6 +189,8 @@ const processNotificationForSpeech = (log: ToastLog): string => {
     });
 
     // 連続文字の短縮処理
+    // consecutiveCharMaxLengthは3でハードコーディング
+    const CONSECUTIVE_CHAR_MAX_LENGTH = 3;
     const consecutiveMinLength = settings.consecutiveCharMinLength || 0;
     if (consecutiveMinLength > 0) {
       // 同じ文字がn文字以上連続している場合、3文字に短縮
@@ -197,7 +199,7 @@ const processNotificationForSpeech = (log: ToastLog): string => {
       text = text.replace(regex, (match) => {
         // 最初の文字を取得して、3文字分だけ繰り返す
         const char = match[0];
-        return char.repeat(3);
+        return char.repeat(CONSECUTIVE_CHAR_MAX_LENGTH);
       });
     }
 
