@@ -89,6 +89,7 @@ function App() {
   // 変換リストの追加用の状態
   const [newReplacementFrom, setNewReplacementFrom] = useState("");
   const [newReplacementTo, setNewReplacementTo] = useState("");
+  const [newReplacementIsRegex, setNewReplacementIsRegex] = useState(false);
 
   // 除外アプリの追加用の状態
   const [newBlockedApp, setNewBlockedApp] = useState("");
@@ -237,40 +238,60 @@ function App() {
                     <Field>
                       <FieldLabel>新しい変換を追加</FieldLabel>
                       <FieldContent>
-                        <div className="flex gap-2">
-                          <Input
-                            value={newReplacementFrom}
-                            onChange={(e) =>
-                              setNewReplacementFrom(e.target.value)
-                            }
-                            placeholder="変換前（例: Chrome）"
-                            className="flex-1"
-                          />
-                          <Input
-                            value={newReplacementTo}
-                            onChange={(e) =>
-                              setNewReplacementTo(e.target.value)
-                            }
-                            placeholder="変換後（例: クローム）"
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              if (newReplacementFrom && newReplacementTo) {
-                                addReplacement({
-                                  from: newReplacementFrom,
-                                  to: newReplacementTo,
-                                });
-                                setNewReplacementFrom("");
-                                setNewReplacementTo("");
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              value={newReplacementFrom}
+                              onChange={(e) =>
+                                setNewReplacementFrom(e.target.value)
                               }
-                            }}
-                            size="icon"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                              placeholder="変換前（例: Chrome）"
+                              className="flex-1"
+                            />
+                            <Input
+                              value={newReplacementTo}
+                              onChange={(e) =>
+                                setNewReplacementTo(e.target.value)
+                              }
+                              placeholder="変換後（例: クローム）"
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                if (newReplacementFrom && newReplacementTo) {
+                                  addReplacement({
+                                    from: newReplacementFrom,
+                                    to: newReplacementTo,
+                                    isRegex: newReplacementIsRegex,
+                                  });
+                                  setNewReplacementFrom("");
+                                  setNewReplacementTo("");
+                                  setNewReplacementIsRegex(false);
+                                }
+                              }}
+                              size="icon"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={newReplacementIsRegex}
+                              onCheckedChange={setNewReplacementIsRegex}
+                              id="new-replacement-regex"
+                            />
+                            <label
+                              htmlFor="new-replacement-regex"
+                              className="text-sm text-muted-foreground cursor-pointer"
+                            >
+                              正規表現として使用
+                            </label>
+                          </div>
                         </div>
+                        <FieldDescription>
+                          正規表現を有効にすると、変換前のテキストを正規表現パターンとして扱います。無効の場合は通常の文字列置換です。
+                        </FieldDescription>
                       </FieldContent>
                     </Field>
                     {settings.replacements.length > 0 && (
@@ -281,6 +302,11 @@ function App() {
                             className="flex items-center gap-2 rounded-md border p-2"
                           >
                             <span className="flex-1 text-sm">
+                              {replacement.isRegex && (
+                                <span className="text-xs text-muted-foreground mr-1">
+                                  [正規表現]
+                                </span>
+                              )}
                               {replacement.from} → {replacement.to}
                             </span>
                             <Button

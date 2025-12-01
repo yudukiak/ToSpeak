@@ -172,15 +172,30 @@ const processNotificationForSpeech = (log: ToastLog): string => {
     text = text.replace(/{title}/g, titleText);
     text = text.replace(/{text}/g, textContent);
 
-    // 変換リストを適用（大文字小文字を区別せずに置換）
+    // 変換リストを適用
     settings.replacements.forEach((replacement: Replacement) => {
       if (replacement.from && replacement.to) {
-        // エスケープして正規表現として使用
-        const escapedFrom = replacement.from.replace(
-          /[.*+?^${}()|[\]\\]/g,
-          "\\$&"
-        );
-        text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
+        if (replacement.isRegex) {
+          // 正規表現として使用（エスケープしない）
+          try {
+            text = text.replace(new RegExp(replacement.from, "gi"), replacement.to);
+          } catch (e) {
+            // 正規表現が無効な場合は通常の文字列マッチにフォールバック
+            console.warn("無効な正規表現:", replacement.from, e);
+            const escapedFrom = replacement.from.replace(
+              /[.*+?^${}()|[\]\\]/g,
+              "\\$&"
+            );
+            text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
+          }
+        } else {
+          // 通常の文字列置換（エスケープして正規表現として使用、大文字小文字を区別しない）
+          const escapedFrom = replacement.from.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+          );
+          text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
+        }
       }
     });
 

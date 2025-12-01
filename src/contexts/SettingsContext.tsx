@@ -4,6 +4,7 @@ import { createContext, useContext, useState, ReactNode } from 'react'
 export interface Replacement {
   from: string
   to: string
+  isRegex?: boolean // 正規表現として扱うか
 }
 
 export interface BlockedApp {
