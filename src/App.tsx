@@ -14,6 +14,7 @@ import {
   Check,
   X
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -392,12 +393,10 @@ function App() {
                               // 表示モード
                               <>
                                 <span className="flex-1 text-sm">
-                                  {replacement.isRegex && (
-                                    <span className="text-xs text-muted-foreground mr-1">
-                                      [正規表現]
-                                    </span>
-                                  )}
                                   {replacement.from} → {replacement.to}
+                                  {replacement.isRegex && (
+                                    <Badge variant="secondary">正規表現</Badge>
+                                  )}
                                 </span>
                                 <Button
                                   type="button"
@@ -951,9 +950,7 @@ function App() {
                                     <div>
                                       本文: {blockedApp.text}
                                       {blockedApp.textIsRegex && (
-                                        <span className="ml-2 text-xs text-muted-foreground">
-                                          (正規表現)
-                                        </span>
+                                        <Badge variant="secondary">正規表現</Badge>
                                       )}
                                     </div>
                                   )}
