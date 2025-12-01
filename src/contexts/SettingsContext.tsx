@@ -33,8 +33,10 @@ interface SettingsContextType {
   settings: Settings
   updateSettings: (settings: Partial<Settings>) => void
   addReplacement: (replacement: Replacement) => void
+  updateReplacement: (index: number, replacement: Replacement) => void
   removeReplacement: (index: number) => void
   addBlockedApp: (blockedApp: BlockedApp) => void
+  updateBlockedApp: (index: number, blockedApp: BlockedApp) => void
   removeBlockedApp: (index: number) => void
   exportSettings: () => void
   importSettings: (file: File) => Promise<void>
@@ -163,6 +165,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const updateReplacement = (index: number, replacement: Replacement) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        replacements: prev.replacements.map((r, i) => i === index ? replacement : r),
+      }
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
+      return updated
+    })
+  }
+
   const removeReplacement = (index: number) => {
     setSettings((prev) => {
       const updated = {
@@ -181,6 +196,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const updated = {
         ...prev,
         blockedApps: [...prev.blockedApps, blockedApp],
+      }
+      // ローカルストレージに保存（最適化して保存）
+      const optimized = optimizeSettings(updated)
+      localStorage.setItem('toast-speak-settings', JSON.stringify(optimized))
+      return updated
+    })
+  }
+
+  const updateBlockedApp = (index: number, blockedApp: BlockedApp) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        blockedApps: prev.blockedApps.map((b, i) => i === index ? blockedApp : b),
       }
       // ローカルストレージに保存（最適化して保存）
       const optimized = optimizeSettings(updated)
@@ -272,8 +300,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         settings,
         updateSettings,
         addReplacement,
+        updateReplacement,
         removeReplacement,
         addBlockedApp,
+        updateBlockedApp,
         removeBlockedApp,
         exportSettings,
         importSettings,

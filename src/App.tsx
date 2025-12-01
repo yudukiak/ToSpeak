@@ -9,7 +9,10 @@ import {
   History,
   Trash2,
   Plus,
-  FileText
+  FileText,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +25,7 @@ import {
   FieldLegend,
   FieldGroup,
 } from "@/components/ui/field";
-import { useSettings } from "./contexts/SettingsContext";
+import { useSettings, type BlockedApp } from "./contexts/SettingsContext";
 import {
   Card,
   CardContent,
@@ -78,8 +81,10 @@ function App() {
     settings,
     updateSettings,
     addReplacement,
+    updateReplacement,
     removeReplacement,
     addBlockedApp,
+    updateBlockedApp,
     removeBlockedApp,
     exportSettings,
     importSettings,
@@ -90,6 +95,23 @@ function App() {
   const [newReplacementFrom, setNewReplacementFrom] = useState("");
   const [newReplacementTo, setNewReplacementTo] = useState("");
   const [newReplacementIsRegex, setNewReplacementIsRegex] = useState(false);
+  
+  // 変換リストの編集用の状態
+  const [editingReplacementIndex, setEditingReplacementIndex] = useState<number | null>(null);
+  const [editingReplacementFrom, setEditingReplacementFrom] = useState("");
+  const [editingReplacementTo, setEditingReplacementTo] = useState("");
+  const [editingReplacementIsRegex, setEditingReplacementIsRegex] = useState(false);
+
+  // 読ませないアプリの編集用の状態
+  const [editingBlockedAppIndex, setEditingBlockedAppIndex] = useState<number | null>(null);
+  const [editingBlockedApp, setEditingBlockedApp] = useState("");
+  const [editingBlockedAppIsRegex, setEditingBlockedAppIsRegex] = useState(false);
+  const [editingBlockedAppId, setEditingBlockedAppId] = useState("");
+  const [editingBlockedAppIdIsRegex, setEditingBlockedAppIdIsRegex] = useState(false);
+  const [editingBlockedTitle, setEditingBlockedTitle] = useState("");
+  const [editingBlockedTitleIsRegex, setEditingBlockedTitleIsRegex] = useState(false);
+  const [editingBlockedText, setEditingBlockedText] = useState("");
+  const [editingBlockedTextIsRegex, setEditingBlockedTextIsRegex] = useState(false);
 
   // 除外アプリの追加用の状態
   const [newBlockedApp, setNewBlockedApp] = useState("");
@@ -301,22 +323,105 @@ function App() {
                             key={index}
                             className="flex items-center gap-2 rounded-md border p-2"
                           >
-                            <span className="flex-1 text-sm">
-                              {replacement.isRegex && (
-                                <span className="text-xs text-muted-foreground mr-1">
-                                  [正規表現]
+                            {editingReplacementIndex === index ? (
+                              // 編集モード
+                              <div className="flex-1 space-y-2">
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={editingReplacementFrom}
+                                    onChange={(e) =>
+                                      setEditingReplacementFrom(e.target.value)
+                                    }
+                                    placeholder="変換前"
+                                    className="flex-1"
+                                  />
+                                  <Input
+                                    value={editingReplacementTo}
+                                    onChange={(e) =>
+                                      setEditingReplacementTo(e.target.value)
+                                    }
+                                    placeholder="変換後"
+                                    className="flex-1"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={editingReplacementIsRegex}
+                                    onCheckedChange={setEditingReplacementIsRegex}
+                                    id={`edit-replacement-regex-${index}`}
+                                  />
+                                  <label
+                                    htmlFor={`edit-replacement-regex-${index}`}
+                                    className="text-sm text-muted-foreground cursor-pointer"
+                                  >
+                                    正規表現として使用
+                                  </label>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (editingReplacementFrom && editingReplacementTo) {
+                                        updateReplacement(index, {
+                                          from: editingReplacementFrom,
+                                          to: editingReplacementTo,
+                                          isRegex: editingReplacementIsRegex,
+                                        });
+                                        setEditingReplacementIndex(null);
+                                      }
+                                    }}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    保存
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingReplacementIndex(null);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    キャンセル
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              // 表示モード
+                              <>
+                                <span className="flex-1 text-sm">
+                                  {replacement.isRegex && (
+                                    <span className="text-xs text-muted-foreground mr-1">
+                                      [正規表現]
+                                    </span>
+                                  )}
+                                  {replacement.from} → {replacement.to}
                                 </span>
-                              )}
-                              {replacement.from} → {replacement.to}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeReplacement(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditingReplacementIndex(index);
+                                    setEditingReplacementFrom(replacement.from);
+                                    setEditingReplacementTo(replacement.to);
+                                    setEditingReplacementIsRegex(replacement.isRegex || false);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeReplacement(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -677,56 +782,210 @@ function App() {
                             key={index}
                             className="flex items-center gap-2 rounded-md border p-2"
                           >
-                            <div className="flex-1 text-sm space-y-1">
-                              {blockedApp.app && (
-                                <div>
-                                  アプリ: {blockedApp.app}
-                                  {blockedApp.appIsRegex && (
-                                    <span className="ml-2 text-xs text-muted-foreground">
-                                      (正規表現)
-                                    </span>
+                            {editingBlockedAppIndex === index ? (
+                              // 編集モード（4つのフィールドすべてを編集可能）
+                              <div className="flex-1 space-y-2">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      value={editingBlockedApp}
+                                      onChange={(e) => setEditingBlockedApp(e.target.value)}
+                                      placeholder="アプリ名"
+                                      className="flex-1"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={editingBlockedAppIsRegex}
+                                        onCheckedChange={setEditingBlockedAppIsRegex}
+                                        id={`edit-blocked-app-regex-${index}`}
+                                      />
+                                      <label
+                                        htmlFor={`edit-blocked-app-regex-${index}`}
+                                        className="text-sm text-muted-foreground whitespace-nowrap"
+                                      >
+                                        正規表現
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      value={editingBlockedAppId}
+                                      onChange={(e) => setEditingBlockedAppId(e.target.value)}
+                                      placeholder="アプリID"
+                                      className="flex-1"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={editingBlockedAppIdIsRegex}
+                                        onCheckedChange={setEditingBlockedAppIdIsRegex}
+                                        id={`edit-blocked-app-id-regex-${index}`}
+                                      />
+                                      <label
+                                        htmlFor={`edit-blocked-app-id-regex-${index}`}
+                                        className="text-sm text-muted-foreground whitespace-nowrap"
+                                      >
+                                        正規表現
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      value={editingBlockedTitle}
+                                      onChange={(e) => setEditingBlockedTitle(e.target.value)}
+                                      placeholder="タイトル"
+                                      className="flex-1"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={editingBlockedTitleIsRegex}
+                                        onCheckedChange={setEditingBlockedTitleIsRegex}
+                                        id={`edit-blocked-title-regex-${index}`}
+                                      />
+                                      <label
+                                        htmlFor={`edit-blocked-title-regex-${index}`}
+                                        className="text-sm text-muted-foreground whitespace-nowrap"
+                                      >
+                                        正規表現
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      value={editingBlockedText}
+                                      onChange={(e) => setEditingBlockedText(e.target.value)}
+                                      placeholder="本文"
+                                      className="flex-1"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={editingBlockedTextIsRegex}
+                                        onCheckedChange={setEditingBlockedTextIsRegex}
+                                        id={`edit-blocked-text-regex-${index}`}
+                                      />
+                                      <label
+                                        htmlFor={`edit-blocked-text-regex-${index}`}
+                                        className="text-sm text-muted-foreground whitespace-nowrap"
+                                      >
+                                        正規表現
+                                      </label>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated: BlockedApp = {};
+                                      if (editingBlockedApp) {
+                                        updated.app = editingBlockedApp;
+                                        updated.appIsRegex = editingBlockedAppIsRegex;
+                                      }
+                                      if (editingBlockedAppId) {
+                                        updated.app_id = editingBlockedAppId;
+                                        updated.appIdIsRegex = editingBlockedAppIdIsRegex;
+                                      }
+                                      if (editingBlockedTitle) {
+                                        updated.title = editingBlockedTitle;
+                                        updated.titleIsRegex = editingBlockedTitleIsRegex;
+                                      }
+                                      if (editingBlockedText) {
+                                        updated.text = editingBlockedText;
+                                        updated.textIsRegex = editingBlockedTextIsRegex;
+                                      }
+                                      updateBlockedApp(index, updated);
+                                      setEditingBlockedAppIndex(null);
+                                    }}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    保存
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingBlockedAppIndex(null);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    キャンセル
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              // 表示モード
+                              <>
+                                <div className="flex-1 text-sm space-y-1">
+                                  {blockedApp.app && (
+                                    <div>
+                                      アプリ: {blockedApp.app}
+                                      {blockedApp.appIsRegex && (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                          (正規表現)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {blockedApp.app_id && (
+                                    <div>
+                                      ID: {blockedApp.app_id}
+                                      {blockedApp.appIdIsRegex && (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                          (正規表現)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {blockedApp.title && (
+                                    <div>
+                                      タイトル: {blockedApp.title}
+                                      {blockedApp.titleIsRegex && (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                          (正規表現)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {blockedApp.text && (
+                                    <div>
+                                      本文: {blockedApp.text}
+                                      {blockedApp.textIsRegex && (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                          (正規表現)
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
-                              )}
-                              {blockedApp.app_id && (
-                                <div>
-                                  ID: {blockedApp.app_id}
-                                  {blockedApp.appIdIsRegex && (
-                                    <span className="ml-2 text-xs text-muted-foreground">
-                                      (正規表現)
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              {blockedApp.title && (
-                                <div>
-                                  タイトル: {blockedApp.title}
-                                  {blockedApp.titleIsRegex && (
-                                    <span className="ml-2 text-xs text-muted-foreground">
-                                      (正規表現)
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              {blockedApp.text && (
-                                <div>
-                                  本文: {blockedApp.text}
-                                  {blockedApp.textIsRegex && (
-                                    <span className="ml-2 text-xs text-muted-foreground">
-                                      (正規表現)
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeBlockedApp(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditingBlockedAppIndex(index);
+                                    setEditingBlockedApp(blockedApp.app || "");
+                                    setEditingBlockedAppIsRegex(blockedApp.appIsRegex || false);
+                                    setEditingBlockedAppId(blockedApp.app_id || "");
+                                    setEditingBlockedAppIdIsRegex(blockedApp.appIdIsRegex || false);
+                                    setEditingBlockedTitle(blockedApp.title || "");
+                                    setEditingBlockedTitleIsRegex(blockedApp.titleIsRegex || false);
+                                    setEditingBlockedText(blockedApp.text || "");
+                                    setEditingBlockedTextIsRegex(blockedApp.textIsRegex || false);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeBlockedApp(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
