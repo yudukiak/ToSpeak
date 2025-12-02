@@ -88,7 +88,7 @@ export function ReplacementList({
                 htmlFor="new-replacement-regex"
                 className="text-sm text-muted-foreground cursor-pointer"
               >
-                正規表現として使用
+                正規表現
               </label>
             </div>
           </div>
