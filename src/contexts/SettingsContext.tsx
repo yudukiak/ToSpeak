@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { useState, ReactNode } from 'react'
+import { SettingsContext } from './settings-context'
 
 // 設定の型定義
 export interface Replacement {
@@ -29,7 +30,7 @@ export interface Settings {
   duplicateNotificationIgnoreSeconds?: number // 重複通知を無視する時間（秒、0または未指定の場合は無効）
 }
 
-interface SettingsContextType {
+export interface SettingsContextType {
   settings: Settings
   updateSettings: (settings: Partial<Settings>) => void
   addReplacement: (replacement: Replacement) => void
@@ -126,7 +127,6 @@ function optimizeSettings(settings: Settings): Partial<Settings> {
   return optimized
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
@@ -315,11 +315,4 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useSettings() {
-  const context = useContext(SettingsContext)
-  if (context === undefined) {
-    throw new Error('useSettings must be used within a SettingsProvider')
-  }
-  return context
-}
 

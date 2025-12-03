@@ -11,8 +11,8 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToastLogs } from "@/contexts/ToastLogContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useToastLogs } from "@/contexts/use-toast-logs";
+import { useSettings } from "@/contexts/use-settings";
 import { ReplacementList } from "./replacement-list";
 import { BlockedAppList } from "./blocked-app-list";
 import { SpeechTemplateField } from "./speech-template-field";

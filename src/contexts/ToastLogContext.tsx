@@ -1,11 +1,10 @@
 import {
-  createContext,
-  useContext,
   useState,
   useRef,
   useEffect,
   ReactNode,
 } from "react";
+import { ToastLogContext } from "./toast-log-context";
 import type { Settings, BlockedApp, Replacement } from "./SettingsContext";
 import type { IpcRendererEvent } from "electron";
 
@@ -41,7 +40,7 @@ export interface ToastLog {
   voices?: string[]; // 利用可能な音声リスト（available_voicesタイプの場合）
 }
 
-interface ToastLogContextType {
+export interface ToastLogContextType {
   logs: ToastLog[];
   clearLogs: () => void;
   speak: (text: string) => void;
@@ -50,9 +49,6 @@ interface ToastLogContextType {
   setVoice: (voiceName: string) => void; // 音声を設定
 }
 
-const ToastLogContext = createContext<ToastLogContextType | undefined>(
-  undefined
-);
 
 // IPC通信のセットアップ（モジュールレベルで一度だけ実行）
 let ipcSetupDone = false;
@@ -266,12 +262,12 @@ function setupIpcListener() {
         break;
       case "available_voices":
         // 利用可能な音声リストを受け取る
-        if ((message as any).voices && Array.isArray((message as any).voices)) {
+        if (message.voices && Array.isArray(message.voices)) {
           // setAvailableVoicesは後で定義されるため、ref経由で更新
           if (setAvailableVoicesRef.current) {
-            setAvailableVoicesRef.current((message as any).voices);
+            setAvailableVoicesRef.current(message.voices);
           }
-          console.log(`[${source}] 利用可能な音声: ${(message as any).voices.length}件`);
+          console.log(`[${source}] 利用可能な音声: ${message.voices.length}件`);
         }
         return; // UIには表示しない
       case "notification":
@@ -513,10 +509,3 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToastLogs() {
-  const context = useContext(ToastLogContext);
-  if (context === undefined) {
-    throw new Error("useToastLogs must be used within a ToastLogProvider");
-  }
-  return context;
-}

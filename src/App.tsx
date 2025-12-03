@@ -4,8 +4,8 @@ import { Header } from "@/components/Header";
 import { NotificationLog } from "@/components/notification-log";
 import { SettingsDrawer } from "@/components/settings-drawer";
 import { Badge } from "@/components/ui/badge";
-import { useToastLogs } from "./contexts/ToastLogContext";
-import { useSettings } from "./contexts/SettingsContext";
+import { useToastLogs } from "./contexts/use-toast-logs";
+import { useSettings } from "./contexts/use-settings";
 import "./App.css";
 
 function App() {
