@@ -1,6 +1,5 @@
 import {
   Bell,
-  MessageSquare,
   AlertCircle,
   CheckCircle2,
   Info,
@@ -8,7 +7,6 @@ import {
   History,
   FileText,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -82,15 +80,8 @@ function formatTimestamp(timestamp: string) {
 
 export function NotificationLog({ logs }: NotificationLogProps) {
   return (
-    <div className="h-[calc(100dvh-2rem)] p-4 space-y-2">
-      <h2 className="text-xl font-bold flex items-center gap-2">
-        通知ログ
-        <Badge variant="outline">
-         <MessageSquare />
-          {logs.length}件
-        </Badge>
-      </h2>
-      <ScrollArea className="border rounded-md h-[calc(100dvh-6rem)]" type="always">
+    <ScrollArea className="h-[calc(100dvh-2rem-2rem-2rem)]" type="always">
+    {/* h: 100dvh - 2rem(header) - 2rem(main padding*2) - 2rem(h2 padding) */}
         <div className="flex flex-col-reverse">
           {logs.map((log, index) => {
             const { icon: Icon, title: logTitle } = getLogConfig(log);
@@ -187,7 +178,6 @@ export function NotificationLog({ logs }: NotificationLogProps) {
           })}
         </div>
       </ScrollArea>
-    </div>
   );
 }
 

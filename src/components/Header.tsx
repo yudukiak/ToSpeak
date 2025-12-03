@@ -1,13 +1,7 @@
 import { Minus, X } from "lucide-react";
 import { WindowButton } from "@/components/ui/window-button";
-import { SettingsDrawer } from "@/components/SettingsDrawer";
-import { useToastLogs } from "@/contexts/ToastLogContext";
-import { useSettings } from "@/contexts/SettingsContext";
 
 export function Header() {
-  const { availableVoices, setVoice, setVolume } = useToastLogs();
-  const { settings, updateSettings, addReplacement, updateReplacement, removeReplacement, addBlockedApp, updateBlockedApp, removeBlockedApp, exportSettings, importSettings, resetSettings } =
-    useSettings();
 
   const handleMinimize = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -31,22 +25,6 @@ export function Header() {
         ToSpeak
       </div>
       <div className="flex [-webkit-app-region:no-drag]">
-        <SettingsDrawer
-          settings={settings}
-          availableVoices={availableVoices}
-          onUpdateSettings={updateSettings}
-          onAddReplacement={addReplacement}
-          onUpdateReplacement={updateReplacement}
-          onRemoveReplacement={removeReplacement}
-          onAddBlockedApp={addBlockedApp}
-          onUpdateBlockedApp={updateBlockedApp}
-          onRemoveBlockedApp={removeBlockedApp}
-          onExportSettings={exportSettings}
-          onImportSettings={importSettings}
-          onResetSettings={resetSettings}
-          onSetVoice={setVoice}
-          onSetVolume={setVolume}
-        />
         <WindowButton variant="minimize" onClick={handleMinimize}>
           <Minus/>
         </WindowButton>

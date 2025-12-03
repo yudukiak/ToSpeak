@@ -1,8 +1,9 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { WindowButton } from "@/components/ui/window-button";
+import { useToastLogs } from "@/contexts/ToastLogContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import {
   Field,
   FieldLabel,
@@ -31,49 +32,31 @@ import {
 } from "@/components/ui/select";
 import { ReplacementList } from "./ReplacementList";
 import { BlockedAppList } from "./BlockedAppList";
-import type { Settings as SettingsType, Replacement, BlockedApp } from "@/contexts/SettingsContext";
 
-interface SettingsDrawerProps {
-  settings: SettingsType;
-  availableVoices: string[];
-  onUpdateSettings: (settings: Partial<SettingsType>) => void;
-  onAddReplacement: (replacement: Replacement) => void;
-  onUpdateReplacement: (index: number, replacement: Replacement) => void;
-  onRemoveReplacement: (index: number) => void;
-  onAddBlockedApp: (blockedApp: BlockedApp) => void;
-  onUpdateBlockedApp: (index: number, blockedApp: BlockedApp) => void;
-  onRemoveBlockedApp: (index: number) => void;
-  onExportSettings: () => void;
-  onImportSettings: (file: File) => Promise<void>;
-  onResetSettings: () => void;
-  onSetVoice: (voiceName: string) => void;
-  onSetVolume: (volume: number) => void;
-}
-
-export function SettingsDrawer({
-  settings,
-  availableVoices,
-  onUpdateSettings,
-  onAddReplacement,
-  onUpdateReplacement,
-  onRemoveReplacement,
-  onAddBlockedApp,
-  onUpdateBlockedApp,
-  onRemoveBlockedApp,
-  onExportSettings,
-  onImportSettings,
-  onResetSettings,
-  onSetVoice,
-  onSetVolume,
-}: SettingsDrawerProps) {
+export function SettingsDrawer() {
+  const { availableVoices, setVoice, setVolume } = useToastLogs();
+  const {
+    settings,
+    updateSettings,
+    addReplacement,
+    updateReplacement,
+    removeReplacement,
+    addBlockedApp,
+    updateBlockedApp,
+    removeBlockedApp,
+    exportSettings,
+    importSettings,
+    resetSettings,
+  } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
 
   return (
-    <Drawer direction="right">
+    <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
-        <WindowButton>
-          <Settings size={16} />
-        </WindowButton>
+        <Button size="sm">
+          <Settings />
+        </Button>
       </DrawerTrigger>
       <DrawerContent 
         className="w-[90dvw]! sm:max-w-[90dvw]! h-[calc(100dvh-32px)] top-8!"
@@ -95,7 +78,7 @@ export function SettingsDrawer({
                       <Input
                         value={settings.speechTemplate}
                         onChange={(e) =>
-                          onUpdateSettings({ speechTemplate: e.target.value })
+                          updateSettings({ speechTemplate: e.target.value })
                         }
                         placeholder="{app}、{title}、{text}"
                         className="flex-1"
@@ -104,7 +87,7 @@ export function SettingsDrawer({
                         type="button"
                         variant="outline"
                         onClick={() =>
-                          onUpdateSettings({
+                          updateSettings({
                             speechTemplate: "{app}、{title}、{text}",
                           })
                         }
@@ -123,9 +106,9 @@ export function SettingsDrawer({
               {/* 変換リスト */}
               <ReplacementList
                 replacements={settings.replacements}
-                onAdd={onAddReplacement}
-                onUpdate={onUpdateReplacement}
-                onRemove={onRemoveReplacement}
+                onAdd={addReplacement}
+                onUpdate={updateReplacement}
+                onRemove={removeReplacement}
               />
 
               {/* 音声設定 */}
@@ -138,8 +121,8 @@ export function SettingsDrawer({
                       value={settings.voiceName || ""}
                       onValueChange={(value) => {
                         const voiceName = value || undefined;
-                        onUpdateSettings({ voiceName });
-                        onSetVoice(value || "");
+                        updateSettings({ voiceName });
+                        setVoice(value || "");
                       }}
                     >
                       <SelectTrigger className="w-full">
@@ -178,8 +161,8 @@ export function SettingsDrawer({
                       value={[settings.volume || 20]}
                       onValueChange={(values) => {
                         const newVolume = values[0];
-                        onUpdateSettings({ volume: newVolume });
-                        onSetVolume(newVolume);
+                        updateSettings({ volume: newVolume });
+                        setVolume(newVolume);
                       }}
                       min={0}
                       max={100}
@@ -201,7 +184,7 @@ export function SettingsDrawer({
                       value={settings.maxTextLength || 0}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        onUpdateSettings({
+                        updateSettings({
                           maxTextLength: isNaN(value) || value < 0 ? 0 : value,
                         });
                       }}
@@ -230,7 +213,7 @@ export function SettingsDrawer({
                       value={settings.duplicateNotificationIgnoreSeconds ?? 30}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        onUpdateSettings({
+                        updateSettings({
                           duplicateNotificationIgnoreSeconds:
                             isNaN(value) || value < 0 ? 0 : value,
                         });
@@ -256,7 +239,7 @@ export function SettingsDrawer({
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={onExportSettings}
+                        onClick={exportSettings}
                       >
                         エクスポート
                       </Button>
@@ -275,7 +258,7 @@ export function SettingsDrawer({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            onImportSettings(file)
+                            importSettings(file)
                               .then(() => {
                                 alert("設定をインポートしました");
                               })
@@ -307,7 +290,7 @@ export function SettingsDrawer({
                             "すべての設定をリセットしますか？この操作は取り消せません。"
                           )
                         ) {
-                          onResetSettings();
+                          resetSettings();
                           alert("設定をリセットしました");
                         }
                       }}
@@ -332,7 +315,7 @@ export function SettingsDrawer({
                       value={settings.consecutiveCharMinLength || 0}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        onUpdateSettings({
+                        updateSettings({
                           consecutiveCharMinLength:
                             isNaN(value) || value < 0 ? 0 : value,
                         });
@@ -351,9 +334,9 @@ export function SettingsDrawer({
               {/* 読ませないアプリの設定 */}
               <BlockedAppList
                 blockedApps={settings.blockedApps}
-                onAdd={onAddBlockedApp}
-                onUpdate={onUpdateBlockedApp}
-                onRemove={onRemoveBlockedApp}
+                onAdd={addBlockedApp}
+                onUpdate={updateBlockedApp}
+                onRemove={removeBlockedApp}
               />
             </FieldSet>
           </div>

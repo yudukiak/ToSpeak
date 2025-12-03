@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
+import { MessageSquare } from "lucide-react";
 import { Header } from "@/components/Header";
 import { NotificationLog } from "@/components/NotificationLog";
+import { SettingsDrawer } from "@/components/SettingsDrawer";
+import { Badge } from "@/components/ui/badge";
 import { useToastLogs } from "./contexts/ToastLogContext";
 import { useSettings } from "./contexts/SettingsContext";
 import "./App.css";
@@ -33,10 +36,22 @@ function App() {
   }, [settings.volume, setVolume]);
 
   return (
-    <main className="h-dvh w-dvw">
+    <>
       <Header />
-      <NotificationLog logs={logs} />
-    </main>
+      <main className="h-[calc(100dvh-2rem)] p-4">
+        <section className="flex justify-between items-center">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            通知ログ
+            <Badge variant="outline">
+              <MessageSquare />
+              {logs.length}件
+            </Badge>
+          </h2>
+          <SettingsDrawer />
+        </section>
+        <NotificationLog logs={logs} />
+      </main>
+    </>
   );
 }
 
