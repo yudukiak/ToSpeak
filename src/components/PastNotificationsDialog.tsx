@@ -46,7 +46,7 @@ export function PastNotificationsDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">詳細を表示</Button>
+        <Button variant="outline" className="text-white">詳細を表示</Button>
       </DialogTrigger>
       {/* top: 50%(中央寄せ) + 1rem(header) */}
       <DialogContent className="max-w-[calc(100dvw-10rem)]! top-[calc(50%+1rem)]">
@@ -57,11 +57,11 @@ export function PastNotificationsDialog({
           </DialogDescription>
         </DialogHeader>
         <ScrollArea
-          className="max-w-[calc(100dvw-13rem)] h-[calc(100dvh-20rem)]"
+          className="max-w-[calc(100dvw-13rem)] h-[calc(100dvh-20rem)] **:data-[slot=scroll-area-thumb]:right-[-10px]"
           type="always"
         >
-            <Table className="min-w-full">
-            <TableHeader>
+            <table>
+            <TableHeader className="sticky top-0 bg-background z-1">
               <TableRow>
                 <TableHead className="min-w-[150px]">app</TableHead>
                 <TableHead className="min-w-[150px]">app_id</TableHead>
@@ -91,8 +91,8 @@ export function PastNotificationsDialog({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-          <ScrollBar orientation="horizontal" />
+          </table>
+          <ScrollBar orientation="horizontal" className="bottom-[-10px]!" />
         </ScrollArea>
       </DialogContent>
     </Dialog>
