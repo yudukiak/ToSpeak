@@ -23,9 +23,21 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PastNotificationsDialog } from "./PastNotificationsDialog";
 import type { ToastLog } from "@/contexts/ToastLogContext";
+import type { LucideIcon } from "lucide-react";
 
 interface NotificationLogProps {
   logs: ToastLog[];
+}
+
+interface NotificationCardProps {
+  icon: LucideIcon;
+  title: string;
+  content?: string;
+  timestamp?: string;
+  logTitle?: string;
+  footerContent?: React.ReactNode;
+  headerAction?: React.ReactNode;
+  cardKey: string;
 }
 
 function getLogConfig(log: { type: string; app?: string }) {
@@ -78,11 +90,51 @@ function formatTimestamp(timestamp: string) {
   }
 }
 
+function NotificationCard({
+  icon: Icon,
+  title,
+  content,
+  timestamp,
+  logTitle,
+  footerContent,
+  headerAction,
+  cardKey,
+}: NotificationCardProps) {
+  return (
+    <Card key={cardKey}>
+      <CardHeader className="gap-0">
+        <CardTitle className="flex items-center gap-2">
+          <Icon className="h-5 w-5" />
+          <span className="font-semibold">{title}</span>
+          {headerAction}
+        </CardTitle>
+      </CardHeader>
+      {content && (
+        <CardContent className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
+          {content}
+        </CardContent>
+      )}
+      <CardFooter className="text-sm text-gray-400 dark:text-gray-600 justify-end gap-2">
+        {footerContent || (
+          <>
+            {logTitle && (
+              <>
+                <span>{logTitle}</span>
+                <span>-</span>
+              </>
+            )}
+            <span>{timestamp ? formatTimestamp(timestamp) : ""}</span>
+          </>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+
 export function NotificationLog({ logs }: NotificationLogProps) {
   return (
-    <ScrollArea className="h-[calc(100dvh-2rem-2rem-2rem)]" type="always">
-    {/* h: 100dvh - 2rem(header) - 2rem(main padding*2) - 2rem(h2 padding) */}
-        <div className="flex flex-col-reverse">
+    <ScrollArea className="flex-1 min-h-0 border rounded-md" type="always">
+        <div className="flex flex-col-reverse gap-2 p-2 pr-4">
           {logs.map((log, index) => {
             const { icon: Icon, title: logTitle } = getLogConfig(log);
             const {
@@ -100,80 +152,62 @@ export function NotificationLog({ logs }: NotificationLogProps) {
             // 過去の通知の場合、Dialogで表示
             if (type === "past_notifications" && notifications) {
               return (
-                <Card
-                  key={`past-notifications-${timestamp}`}
-                  className="m-2 mr-4"
-                >
-                  <CardHeader className="gap-0">
-                    <CardTitle className="flex items-center gap-2">
-                      <Icon className="h-5 w-5" />
-                      <span className="font-semibold">{title}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-gray-700 dark:text-gray-300">
-                    {message}
-                  </CardContent>
-                  <CardFooter>
+                <NotificationCard
+                  icon={Icon}
+                  title={title || ""}
+                  content={message}
+                  timestamp={timestamp}
+                  footerContent={
                     <PastNotificationsDialog
                       notifications={notifications}
                       title={title || ""}
                       message={message || ""}
                       timestamp={timestamp || ""}
                     />
-                  </CardFooter>
-                </Card>
+                  }
+                  cardKey={`past-notifications-${timestamp}`}
+                />
               );
             }
 
             // 通常の通知
+            const headerAction = (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    <FileText />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto max-w-[80dvw]" align="end">
+                  <div className="grid gap-4">
+                    {[
+                      { label: "app", value: app },
+                      { label: "app_id", value: app_id },
+                      { label: "title", value: title },
+                      { label: "text", value: text },
+                    ].map((item, index) => (
+                      <div key={index} className="space-y-2">
+                        <h3 className="text-sm font-bold">{item.label}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            );
+
             return (
-              <Card
-                key={`${notification_id || index}-${timestamp}`}
-                className="m-2 mr-4"
-              >
-                <CardHeader className="gap-0">
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon className="h-5 w-5" />
-                    <span className="font-semibold">{title}</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="icon" className="ml-auto"><FileText /></Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto max-w-[80dvw]" align="end">
-                        <div className="grid gap-4">
-                          {[
-                            { label: "app", value: app },
-                            { label: "app_id", value: app_id },
-                            { label: "title", value: title },
-                            { label: "text", value: text },
-                          ].map((item, index) => (
-                            <div key={index} className="space-y-2">
-                              <h3 className="text-sm font-bold">
-                                {item.label}
-                              </h3>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
-                                {item.value}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                  {(text || message) && <>{text || message}</>}
-                </CardContent>
-                <CardFooter className="text-sm text-gray-400 dark:text-gray-600 justify-end gap-2">
-                  {type === "notification" && logTitle && (
-                    <>
-                      <span>{logTitle}</span>
-                      <span>-</span>
-                    </>
-                  )}
-                  <span>{timestamp ? formatTimestamp(timestamp) : ""}</span>
-                </CardFooter>
-              </Card>
+              <NotificationCard
+                icon={Icon}
+                title={title || ""}
+                content={text || message}
+                timestamp={timestamp}
+                logTitle={type === "notification" ? logTitle : undefined}
+                headerAction={headerAction}
+                cardKey={`${notification_id || index}-${timestamp}`}
+              />
             );
           })}
         </div>

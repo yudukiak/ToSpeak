@@ -38,8 +38,8 @@ function App() {
   return (
     <>
       <Header />
-      <main className="h-[calc(100dvh-2rem)] p-4">
-        <section className="flex justify-between items-center">
+      <main className="h-[calc(100dvh-2rem)] p-4 flex flex-col">
+        <section className="flex justify-between items-center shrink-0 mb-2">
           <h2 className="text-xl font-bold flex items-center gap-2">
             通知ログ
             <Badge variant="outline">

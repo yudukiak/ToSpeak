@@ -41,17 +41,15 @@ function formatTimestamp(timestamp: string) {
 }
 
 export function PastNotificationsDialog({
-  notifications,
-  title,
-  message,
-  timestamp,
+  notifications
 }: PastNotificationsDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline">詳細を表示</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-full! h-full">
+      {/* top: 50%(中央寄せ) + 1rem(header) */}
+      <DialogContent className="max-w-[calc(100dvw-10rem)]! top-[calc(50%+1rem)]">
         <DialogHeader className="text-left">
           <DialogTitle>過去の通知（{notifications.length}件）</DialogTitle>
           <DialogDescription>
@@ -59,10 +57,10 @@ export function PastNotificationsDialog({
           </DialogDescription>
         </DialogHeader>
         <ScrollArea
-          className="min-w-[80dvw] h-[calc(100dvh-8rem)] pr-3"
+          className="max-w-[calc(100dvw-13rem)] h-[calc(100dvh-20rem)]"
           type="always"
         >
-          <Table>
+            <Table className="min-w-full">
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[150px]">app</TableHead>
@@ -94,7 +92,7 @@ export function PastNotificationsDialog({
               ))}
             </TableBody>
           </Table>
-          <ScrollBar className="" orientation="horizontal" />
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </DialogContent>
     </Dialog>
