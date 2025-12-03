@@ -26,6 +26,8 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 
 let win: BrowserWindow | null
 let toastBridgeProcess: ChildProcess | null = null
+// ログを保持する配列（リロード時も保持）
+const storedLogs: any[] = []
 
 function createWindow() {
   win = new BrowserWindow({
@@ -176,8 +178,17 @@ function startToastBridge() {
           
           // debugタイプ以外のメッセージをReact側に転送
           // debugタイプはコンソールのみで、UIには表示しない
-          if (message.type !== 'debug' && win && !win.isDestroyed()) {
-            win.webContents.send('toast-log', message)
+          if (message.type !== 'debug') {
+            // ログを配列に追加（最大1000件まで保持）
+            storedLogs.push(message)
+            if (storedLogs.length > 1000) {
+              storedLogs.shift()
+            }
+            
+            // レンダラーに送信
+            if (win && !win.isDestroyed()) {
+              win.webContents.send('toast-log', message)
+            }
           }
         } catch (e) {
           const errorMsg = `Toast Bridge: JSON解析エラー ${line} ${e}`
@@ -390,6 +401,11 @@ ipcMain.on('window-close', () => {
   if (win && !win.isDestroyed()) {
     win.close()
   }
+})
+
+// IPCハンドラー: 保持されているログを取得
+ipcMain.handle('get-stored-logs', () => {
+  return storedLogs
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

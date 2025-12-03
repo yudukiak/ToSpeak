@@ -1,3 +1,4 @@
+import { ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -18,11 +18,8 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { PastNotification } from "@/contexts/ToastLogContext";
 
-interface PastNotificationsDialogProps {
+interface NotificationsDialogProps {
   notifications: PastNotification[];
-  title: string;
-  message: string;
-  timestamp: string;
 }
 
 function formatTimestamp(timestamp: string) {
@@ -40,13 +37,15 @@ function formatTimestamp(timestamp: string) {
   }
 }
 
-export function PastNotificationsDialog({
+export function NotificationsDialog({
   notifications
-}: PastNotificationsDialogProps) {
+}: NotificationsDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="text-white">詳細を表示</Button>
+        <Button variant="outline" size="sm" className="ml-auto">
+          <ScrollText />
+        </Button>
       </DialogTrigger>
       {/* top: 50%(中央寄せ) + 1rem(header) */}
       <DialogContent className="max-w-[calc(100dvw-10rem)]! top-[calc(50%+1rem)]">

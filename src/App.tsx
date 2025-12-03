@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { MessageSquare } from "lucide-react";
 import { Header } from "@/components/Header";
-import { NotificationLog } from "@/components/NotificationLog";
-import { SettingsDrawer } from "@/components/SettingsDrawer";
+import { NotificationLog } from "@/components/notification-log";
+import { SettingsDrawer } from "@/components/settings-drawer";
 import { Badge } from "@/components/ui/badge";
 import { useToastLogs } from "./contexts/ToastLogContext";
 import { useSettings } from "./contexts/SettingsContext";
@@ -28,10 +28,17 @@ function App() {
     }
   }, [settings.voiceName, availableVoices.length, setVoice]);
 
-  // 起動時に保存された音量設定を適用
+  // 起動時に保存された音量設定を適用（初回のみ）
+  const volumeAppliedRef = useRef(false);
   useEffect(() => {
+    // 既に適用済みの場合はスキップ
+    if (volumeAppliedRef.current) {
+      return;
+    }
+
     if (settings.volume !== undefined) {
       setVolume(settings.volume);
+      volumeAppliedRef.current = true;
     }
   }, [settings.volume, setVolume]);
 

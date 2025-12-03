@@ -391,6 +391,7 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<ToastLog[]>([]);
   const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const isSetupRef = useRef(false);
+  const logsLoadedRef = useRef(false);
 
   // 常に最新のsetLogsとsetAvailableVoicesをrefに保存
   setLogsRef.current = setLogs;
@@ -401,6 +402,36 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
     setupIpcListener();
     isSetupRef.current = true;
   }
+
+  // 起動時に保持されているログを取得
+  useEffect(() => {
+    if (logsLoadedRef.current) {
+      return;
+    }
+    
+    if (typeof window !== "undefined" && window.ipcRenderer) {
+      window.ipcRenderer.invoke("get-stored-logs").then((storedLogs: ToastLog[]) => {
+        if (storedLogs && storedLogs.length > 0) {
+          // 空のログをフィルタリング（title、text、messageがすべて空のログを除外）
+          const filteredLogs = storedLogs.filter((log) => {
+            // past_notificationsタイプは除外しない
+            if (log.type === "past_notifications") {
+              return true;
+            }
+            // title、text、messageのいずれかが存在する場合は表示
+            return !!(log.title || log.text || log.message);
+          });
+          
+          if (filteredLogs.length > 0) {
+            setLogs(filteredLogs);
+          }
+          logsLoadedRef.current = true;
+        }
+      }).catch((error) => {
+        console.error("Failed to get stored logs:", error);
+      });
+    }
+  }, []);
 
   // settingsを定期的に更新（useEffectで設定を監視）
   useEffect(() => {
