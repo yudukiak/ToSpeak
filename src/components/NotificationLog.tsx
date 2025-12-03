@@ -82,7 +82,7 @@ function formatTimestamp(timestamp: string) {
 
 export function NotificationLog({ logs }: NotificationLogProps) {
   return (
-    <div className="h-full w-full p-4 space-y-2">
+    <div className="h-[calc(100dvh-2rem)] p-4 space-y-2">
       <h2 className="text-xl font-bold flex items-center gap-2">
         通知ログ
         <Badge variant="outline">
@@ -90,7 +90,7 @@ export function NotificationLog({ logs }: NotificationLogProps) {
           {logs.length}件
         </Badge>
       </h2>
-      <ScrollArea className="border rounded-md h-[calc(100dvh-4rem)]" type="always">
+      <ScrollArea className="border rounded-md h-[calc(100dvh-6rem)]" type="always">
         <div className="flex flex-col-reverse">
           {logs.map((log, index) => {
             const { icon: Icon, title: logTitle } = getLogConfig(log);

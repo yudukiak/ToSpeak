@@ -33,6 +33,11 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
+    titleBarStyle: 'hidden',
+    minWidth: 640,
+    width: 640,
+    minHeight: 640,
+    height: 640,
   })
 
   // Test active push message to Renderer-process.
@@ -371,6 +376,20 @@ ipcMain.on('set-volume', (_event, volume: number) => {
 // IPCハンドラー: レンダラーから音声設定リクエストを受け取る
 ipcMain.on('set-voice', (_event, voiceName: string) => {
   setVoice(voiceName)
+})
+
+// IPCハンドラー: ウィンドウを最小化
+ipcMain.on('window-minimize', () => {
+  if (win && !win.isDestroyed()) {
+    win.minimize()
+  }
+})
+
+// IPCハンドラー: ウィンドウを閉じる
+ipcMain.on('window-close', () => {
+  if (win && !win.isDestroyed()) {
+    win.close()
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

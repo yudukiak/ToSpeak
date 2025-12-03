@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { SettingsDrawer } from "@/components/SettingsDrawer";
+import { Header } from "@/components/Header";
 import { NotificationLog } from "@/components/NotificationLog";
 import { useToastLogs } from "./contexts/ToastLogContext";
 import { useSettings } from "./contexts/SettingsContext";
@@ -7,8 +7,7 @@ import "./App.css";
 
 function App() {
   const { logs, setVolume, availableVoices, setVoice } = useToastLogs();
-  const { settings, updateSettings, addReplacement, updateReplacement, removeReplacement, addBlockedApp, updateBlockedApp, removeBlockedApp, exportSettings, importSettings, resetSettings } =
-    useSettings();
+  const { settings } = useSettings();
 
   // 起動時に保存された音声設定を適用（初回のみ）
   const voiceAppliedRef = useRef(false);
@@ -35,22 +34,7 @@ function App() {
 
   return (
     <main className="h-dvh w-dvw">
-      <SettingsDrawer
-        settings={settings}
-        availableVoices={availableVoices}
-        onUpdateSettings={updateSettings}
-        onAddReplacement={addReplacement}
-        onUpdateReplacement={updateReplacement}
-        onRemoveReplacement={removeReplacement}
-        onAddBlockedApp={addBlockedApp}
-        onUpdateBlockedApp={updateBlockedApp}
-        onRemoveBlockedApp={removeBlockedApp}
-        onExportSettings={exportSettings}
-        onImportSettings={importSettings}
-        onResetSettings={resetSettings}
-        onSetVoice={setVoice}
-        onSetVolume={setVolume}
-      />
+      <Header />
       <NotificationLog logs={logs} />
     </main>
   );

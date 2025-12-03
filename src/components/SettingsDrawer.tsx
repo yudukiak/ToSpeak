@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { WindowButton } from "@/components/ui/window-button";
 import {
   Field,
   FieldLabel,
@@ -70,11 +71,13 @@ export function SettingsDrawer({
   return (
     <Drawer direction="right">
       <DrawerTrigger asChild>
-        <Button variant="outline" size="icon" className="fixed top-2 right-2">
-          <Settings />
-        </Button>
+        <WindowButton>
+          <Settings size={16} />
+        </WindowButton>
       </DrawerTrigger>
-      <DrawerContent className="w-[90dvw]! sm:max-w-[90dvw]!">
+      <DrawerContent 
+        className="w-[90dvw]! sm:max-w-[90dvw]! h-[calc(100dvh-32px)] top-8!"
+      >
         <ScrollArea className="h-full" type="always">
           <DrawerHeader>
             <DrawerTitle>設定</DrawerTitle>
