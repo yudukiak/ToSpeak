@@ -12,7 +12,7 @@ import {
   FieldLegend,
 } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
-import type { Replacement } from "@/contexts/SettingsContext";
+import type { Replacement } from "@/types/settings";
 
 interface ReplacementListProps {
   replacements: Replacement[];

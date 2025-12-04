@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { PastNotification } from "@/contexts/ToastLogContext";
+import type { PastNotification } from "@/types/toast-log";
 
 interface NotificationsDialogProps {
   notifications: PastNotification[];

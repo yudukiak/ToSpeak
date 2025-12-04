@@ -1,6 +1,6 @@
 import { Bell, AlertCircle, CheckCircle2, Info, HelpCircle, History } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { ToastLog } from "@/contexts/ToastLogContext";
+import type { ToastLog } from "@/types/toast-log";
 import { NotificationCard } from "./card";
 import { NotificationsDialog } from "./dialog";
 import { NotificationPopover } from "./popover";

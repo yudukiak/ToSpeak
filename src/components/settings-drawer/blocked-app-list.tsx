@@ -12,7 +12,7 @@ import {
   FieldLegend,
 } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
-import type { BlockedApp } from "@/contexts/SettingsContext";
+import type { BlockedApp } from "@/types/settings";
 
 interface BlockedAppListProps {
   blockedApps: BlockedApp[];

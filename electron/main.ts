@@ -25,33 +25,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 // Toast通知ログの型定義
-interface ToastLog {
-  type:
-    | "notification"
-    | "ready"
-    | "info"
-    | "error"
-    | "debug"
-    | "past_notifications"
-    | "available_voices";
-  app?: string;
-  app_id?: string;
-  title?: string;
-  text?: string;
-  notification_id?: string;
-  timestamp?: string;
-  message?: string;
-  source?: string;
-  notifications?: Array<{
-    app: string;
-    app_id: string;
-    title: string;
-    text: string;
-    notification_id: string;
-    timestamp: string;
-  }>;
-  voices?: string[];
-}
+import type { ToastLog } from '../src/types/toast-log'
 
 let win: BrowserWindow | null
 let toastBridgeProcess: ChildProcess | null = null
