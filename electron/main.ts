@@ -119,7 +119,7 @@ function startToastBridge() {
     return
   }
 
-  // ビルド時はtoast_bridge.exeを使用、開発時はPythonスクリプトを使用
+  // ビルド時はToSpeak-Bridge.exeを使用、開発時はPythonスクリプトを使用
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
   let toastBridgePath: string
   let command: string
@@ -132,7 +132,7 @@ function startToastBridge() {
     args = [toastBridgePath]
   } else {
     // 本番時: PyInstallerでビルドしたexeを使用
-    toastBridgePath = path.join(process.resourcesPath, 'toast_bridge.exe')
+    toastBridgePath = path.join(process.resourcesPath, 'ToSpeak-Bridge.exe')
     command = toastBridgePath
     args = []
     
@@ -140,7 +140,7 @@ function startToastBridge() {
     if (!existsSync(toastBridgePath)) {
       console.error(`[Toast Bridge] ファイルが存在しません: ${toastBridgePath}`)
       // 代替パスを試す
-      const altPath = path.join(__dirname, '..', 'resources', 'toast_bridge.exe')
+      const altPath = path.join(__dirname, '..', 'resources', 'ToSpeak-Bridge.exe')
       if (existsSync(altPath)) {
         toastBridgePath = altPath
         command = altPath

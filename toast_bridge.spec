@@ -81,6 +81,76 @@ except Exception as e:
 # hiddenimportsに追加するだけで十分です。
 # collect_allを使うと、バイナリファイルの抽出に問題が発生する可能性があります。
 
+# package.jsonからバージョンと作者情報を取得
+import json
+from datetime import datetime
+
+try:
+    # specpathはPyInstallerが提供する変数（.specファイルのディレクトリパス）
+    spec_dir = os.path.dirname(os.path.abspath(specpath)) if 'specpath' in globals() else os.path.dirname(os.path.abspath('toast_bridge.spec'))
+    package_json_path = os.path.join(spec_dir, 'package.json')
+    with open(package_json_path, 'r', encoding='utf-8') as f:
+        package_data = json.load(f)
+    
+    version = package_data.get('version', '0.0.0')
+    author = package_data.get('author', '')
+    product_name = package_data.get('productName', 'ToSpeak')
+    current_year = datetime.now().year
+    
+    # バージョンを数値のタプルに変換（例: "0.1.0" -> (0, 1, 0, 0)）
+    version_parts = version.split('.')
+    version_tuple = tuple(int(v) for v in version_parts[:4]) + (0,) * (4 - len(version_parts))
+    if len(version_tuple) > 4:
+        version_tuple = version_tuple[:4]
+    
+    # バージョン情報ファイルを生成
+    version_file_content = f'''# UTF-8
+#
+# For more details about fixed file info 'ffi' see:
+# http://msdn.microsoft.com/en-us/library/ms646997.aspx
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers={version_tuple},
+    prodvers={version_tuple},
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+      StringTable(
+        u'040904B0',
+        [StringStruct(u'CompanyName', u'{author}'),
+        StringStruct(u'FileDescription', u'{product_name} Bridge'),
+        StringStruct(u'FileVersion', u'{version}'),
+        StringStruct(u'InternalName', u'ToSpeak-Bridge'),
+        StringStruct(u'LegalCopyright', u'Copyright © {current_year} {author}'),
+        StringStruct(u'OriginalFilename', u'ToSpeak-Bridge.exe'),
+        StringStruct(u'ProductName', u'{product_name}'),
+        StringStruct(u'ProductVersion', u'{version}')])
+      ]), 
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)
+'''
+    
+    # バージョン情報ファイルをdist-pythonディレクトリに出力
+    # dist-pythonディレクトリが存在しない場合は作成
+    dist_python_dir = os.path.join(spec_dir, 'dist-python')
+    os.makedirs(dist_python_dir, exist_ok=True)
+    version_file_path = os.path.join(dist_python_dir, 'version.txt')
+    with open(version_file_path, 'w', encoding='utf-8') as f:
+        f.write(version_file_content)
+    
+    print(f"INFO: Generated version.txt with version {version}, copyright © {current_year} {author}")
+except Exception as e:
+    print(f"Warning: Failed to generate version.txt: {e}")
+    version_file_path = None
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -90,10 +160,12 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='toast_bridge',
+    name='ToSpeak-Bridge',  # ToSpeakの子プロセスだと分かるように名前を変更
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,  # UPXはWindowsで問題を起こすことがあるため無効化
     console=True,  # コンソールウィンドウを表示（spawnで実行するため）
+    icon='public/icon.png',  # アイコンを設定（PNGから自動変換される）
+    version=version_file_path if 'version_file_path' in locals() and version_file_path else None,  # バージョン情報を設定
 )

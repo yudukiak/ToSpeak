@@ -88,7 +88,7 @@ npm run publish
 
 1. **prebuild**
    - `build:clean`: 以前のビルド成果物をクリーンアップ
-   - `build:bridge`: Pythonブリッジ（`toast_bridge.exe`）をビルド
+   - `build:bridge`: Pythonブリッジ（`ToSpeak-Bridge.exe`）をビルド
 2. **build**
    - TypeScriptのコンパイル
    - Viteによるフロントエンドのビルド
@@ -108,4 +108,3 @@ ToSpeak/
 └ python/           # Pythonブリッジ
   └ toast_bridge.py # Toast通知監視・音声合成
 ```
-

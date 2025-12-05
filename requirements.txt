@@ -1,4 +1,4 @@
 winsdk
 pywin32
 e2k
-
+Pillow
