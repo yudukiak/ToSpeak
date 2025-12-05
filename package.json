@@ -22,7 +22,7 @@
     "prebuild": "npm run build:clean && npm run build:bridge",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "build:bridge": "pyinstaller toast_bridge.spec --clean --noconfirm --distpath build"
+    "build:bridge": "pyinstaller toast_bridge.spec --clean --noconfirm --distpath dist-python --workpath dist-python"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

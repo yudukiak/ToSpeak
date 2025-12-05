@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 dist-electron
+dist-python
 release
 *.local
 
@@ -24,6 +25,3 @@ release
 *.njsproj
 *.sln
 *.sw?
-
-# Python
-build
