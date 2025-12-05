@@ -29,13 +29,14 @@ export function SettingsManagementField({
         <FieldLabel>設定のインポート/エクスポート</FieldLabel>
         <FieldContent>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onExport}>
+            <Button type="button" variant="outline" onClick={onExport} aria-label="設定をエクスポート">
               エクスポート
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
+              aria-label="設定をインポート"
             >
               インポート
             </Button>
@@ -44,6 +45,7 @@ export function SettingsManagementField({
               type="file"
               accept=".json"
               style={{ display: "none" }}
+              aria-label="設定ファイルを選択"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {
@@ -83,6 +85,7 @@ export function SettingsManagementField({
                 alert("設定をリセットしました");
               }
             }}
+            aria-label="すべての設定をリセット"
           >
             全リセット
           </Button>

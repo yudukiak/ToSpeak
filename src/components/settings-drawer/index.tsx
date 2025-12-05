@@ -43,8 +43,9 @@ export function SettingsDrawer() {
   return (
     <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
-        <Button size="sm">
-          <Settings />
+        <Button size="sm" aria-label="設定を表示">
+          <Settings aria-hidden="true" />
+          <span className="sr-only">設定を表示</span>
         </Button>
       </DrawerTrigger>
       <DrawerContent 

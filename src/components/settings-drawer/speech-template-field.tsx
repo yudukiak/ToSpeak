@@ -30,13 +30,16 @@ export function SpeechTemplateField({
               onChange={(e) => onUpdate(e.target.value)}
               placeholder="{app}、{title}、{text}"
               className="flex-1"
+              aria-label="テンプレートを入力"
             />
             <Button
               type="button"
               variant="outline"
               onClick={() => onUpdate("{app}、{title}、{text}")}
+              aria-label="テンプレートをリセット"
             >
               リセット
+              <span className="sr-only">テンプレートをリセット</span>
             </Button>
           </div>
           <FieldDescription>

@@ -29,6 +29,7 @@ export function VolumeSettingsField({
             max={100}
             step={1}
             className="w-full"
+            aria-label="音量を調整"
           />
         </FieldContent>
       </Field>

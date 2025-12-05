@@ -52,12 +52,14 @@ export function ReplacementList({
                 onChange={(e) => setNewReplacementFrom(e.target.value)}
                 placeholder="変換前（例: Chrome）"
                 className="flex-1"
+                aria-label="変換前を入力"
               />
               <Input
                 value={newReplacementTo}
                 onChange={(e) => setNewReplacementTo(e.target.value)}
                 placeholder="変換後（例: クローム）"
                 className="flex-1"
+                aria-label="変換後を入力"
               />
               <Button
                 type="button"
@@ -74,8 +76,10 @@ export function ReplacementList({
                   }
                 }}
                 size="icon"
+                aria-label="変換を追加"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">変換を追加</span>
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -83,6 +87,7 @@ export function ReplacementList({
                 checked={newReplacementIsRegex}
                 onCheckedChange={setNewReplacementIsRegex}
                 id="new-replacement-regex"
+                aria-label="正規表現を使用"
               />
               <label
                 htmlFor="new-replacement-regex"
@@ -115,12 +120,14 @@ export function ReplacementList({
                       }
                       placeholder="変換前"
                       className="flex-1"
+                      aria-label="変換前を編集"
                     />
                     <Input
                       value={editingReplacementTo}
                       onChange={(e) => setEditingReplacementTo(e.target.value)}
                       placeholder="変換後"
                       className="flex-1"
+                      aria-label="変換後を編集"
                     />
                   </div>
                   <div className="flex items-center gap-2">
@@ -128,6 +135,7 @@ export function ReplacementList({
                       checked={editingReplacementIsRegex}
                       onCheckedChange={setEditingReplacementIsRegex}
                       id={`edit-replacement-regex-${index}`}
+                      aria-label="正規表現を使用"
                     />
                     <label
                       htmlFor={`edit-replacement-regex-${index}`}
@@ -150,9 +158,11 @@ export function ReplacementList({
                           setEditingReplacementIndex(null);
                         }
                       }}
+                      aria-label="変換を保存"
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      <Check className="h-4 w-4 mr-1" aria-hidden="true" />
                       保存
+                      <span className="sr-only">変換を保存</span>
                     </Button>
                     <Button
                       type="button"
@@ -161,9 +171,11 @@ export function ReplacementList({
                       onClick={() => {
                         setEditingReplacementIndex(null);
                       }}
+                      aria-label="変換をキャンセル"
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <X className="h-4 w-4 mr-1" aria-hidden="true" />
                       キャンセル
+                      <span className="sr-only">変換をキャンセル</span>
                     </Button>
                   </div>
                 </div>
@@ -188,16 +200,20 @@ export function ReplacementList({
                       setEditingReplacementTo(replacement.to);
                       setEditingReplacementIsRegex(replacement.isRegex || false);
                     }}
+                    aria-label="変換を編集"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">変換を編集</span>
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => onRemove(index)}
+                    aria-label="変換を削除"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">変換を削除</span>
                   </Button>
                 </>
               )}

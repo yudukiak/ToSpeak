@@ -32,7 +32,7 @@ export function NotificationCard({ icon: Icon, title, content, timestamp, logTit
     <Card key={cardKey}>
       <CardHeader className="gap-0">
         <CardTitle className="flex items-center gap-2">
-          <Icon className="h-5 w-5" />
+          <Icon className="h-5 w-5" aria-hidden="true" />
           <span className="font-semibold">{title}</span>
           {headerAction}
         </CardTitle>

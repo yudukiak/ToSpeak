@@ -97,6 +97,7 @@ export function BlockedAppList({
                     }
                     placeholder={config.placeholder}
                     className="flex-1"
+                    aria-label={config.placeholder}
                   />
                   <div className="flex items-center gap-2">
                     <Switch
@@ -108,6 +109,7 @@ export function BlockedAppList({
                         }))
                       }
                       id={`${config.id}-regex`}
+                      aria-label="正規表現を使用"
                     />
                     <label
                       htmlFor={`${config.id}-regex`}
@@ -142,9 +144,11 @@ export function BlockedAppList({
                 }
               }}
               className="w-full"
+              aria-label="除外アプリを追加"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
               追加
+              <span className="sr-only">除外アプリを追加</span>
             </Button>
           </div>
           <FieldDescription>
@@ -178,6 +182,7 @@ export function BlockedAppList({
                           }
                           placeholder={config.placeholder.split("（")[0]}
                           className="flex-1"
+                          aria-label={`${config.placeholder.split("（")[0]}を編集`}
                         />
                         <div className="flex items-center gap-2">
                           <Switch
@@ -192,6 +197,7 @@ export function BlockedAppList({
                               }))
                             }
                             id={`edit-blocked-${config.id}-regex-${index}`}
+                            aria-label="正規表現を使用"
                           />
                           <label
                             htmlFor={`edit-blocked-${config.id}-regex-${index}`}
@@ -228,9 +234,11 @@ export function BlockedAppList({
                         onUpdate(index, updated);
                         setEditingBlockedAppIndex(null);
                       }}
+                      aria-label="除外アプリを保存"
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      <Check className="h-4 w-4 mr-1" aria-hidden="true" />
                       保存
+                      <span className="sr-only">除外アプリを保存</span>
                     </Button>
                     <Button
                       type="button"
@@ -239,9 +247,11 @@ export function BlockedAppList({
                       onClick={() => {
                         setEditingBlockedAppIndex(null);
                       }}
+                      aria-label="除外アプリをキャンセル"
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <X className="h-4 w-4 mr-1" aria-hidden="true" />
                       キャンセル
+                      <span className="sr-only">除外アプリをキャンセル</span>
                     </Button>
                   </div>
                 </div>
@@ -315,16 +325,20 @@ export function BlockedAppList({
                         },
                       });
                     }}
+                    aria-label="除外アプリを編集"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">除外アプリを編集</span>
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => onRemove(index)}
+                    aria-label="除外アプリを削除"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">除外アプリを削除</span>
                   </Button>
                 </>
               )}

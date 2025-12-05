@@ -13,8 +13,9 @@ export function NotificationPopover({ app, app_id, title, text }: NotificationPo
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto">
-          <FileText />
+        <Button variant="outline" size="sm" className="ml-auto" aria-label="通知の詳細を表示">
+          <FileText aria-hidden="true" />
+          <span className="sr-only">通知の詳細を表示</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto max-w-[80dvw]" align="end">

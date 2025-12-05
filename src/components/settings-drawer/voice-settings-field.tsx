@@ -34,6 +34,7 @@ export function VoiceSettingsField({
           <Select
             value={voiceName || ""}
             onValueChange={(value) => onVoiceChange(value || "")}
+            aria-label="音声を選択"
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="音声を選択してください（読み上げ無効）" />

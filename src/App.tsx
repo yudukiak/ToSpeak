@@ -50,7 +50,7 @@ function App() {
           <h2 className="text-xl font-bold flex items-center gap-2">
             通知ログ
             <Badge variant="outline">
-              <MessageSquare />
+              <MessageSquare aria-hidden="true" />
               {logs.length}件
             </Badge>
           </h2>

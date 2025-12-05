@@ -43,8 +43,9 @@ export function NotificationsDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto">
-          <ScrollText />
+        <Button variant="outline" size="sm" className="ml-auto" aria-label="過去の通知を表示">
+          <ScrollText aria-hidden="true" />
+          <span className="sr-only">過去の通知を表示</span>
         </Button>
       </DialogTrigger>
       {/* top: 50%(中央寄せ) + 1rem(header) */}

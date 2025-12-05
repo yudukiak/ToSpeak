@@ -27,11 +27,13 @@ export function Header() {
         <span className="text-gray-400">v{packageJson.version}</span>
       </div>
       <div className="flex [-webkit-app-region:no-drag]">
-        <WindowButton variant="minimize" onClick={handleMinimize}>
-          <Minus/>
+        <WindowButton variant="minimize" onClick={handleMinimize} aria-label="最小化">
+          <Minus aria-hidden="true" />
+          <span className="sr-only">最小化</span>
         </WindowButton>
-        <WindowButton variant="close" onClick={handleClose}>
-          <X/>
+        <WindowButton variant="close" onClick={handleClose} aria-label="閉じる">
+          <X aria-hidden="true" />
+          <span className="sr-only">閉じる</span>
         </WindowButton>
       </div>
     </header>
