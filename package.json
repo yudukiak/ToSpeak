@@ -19,11 +19,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:app": "tsc && vite build",
     "build:bridge": "pyinstaller toast_bridge.spec --clean --noconfirm --distpath dist-python --workpath dist-python",
     "build:clean": "rimraf release || echo Cleanup skipped",
     "prebuild": "npm run build:clean && npm run build:bridge",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "publish": "dotenv -e .env -- electron-builder --publish=always"
+    "publish": "npm run build:clean && npm run build:bridge && npm run build:app && dotenv -e .env -- electron-builder --publish=always"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
