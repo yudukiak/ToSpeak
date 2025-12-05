@@ -169,6 +169,7 @@ function startToastBridge() {
         PATH: process.env.PATH, // PATH環境変数を継承（DLL検索のため）
       },
       shell: false,
+      detached: false, // 親プロセスが終了したときに子プロセスも確実に終了させる
     })
   } catch (spawnError) {
     console.error(`[Toast Bridge] spawnエラー:`, spawnError)
@@ -305,8 +306,51 @@ function startToastBridge() {
  */
 function stopToastBridge() {
   if (toastBridgeProcess) {
-    toastBridgeProcess.kill()
-    toastBridgeProcess = null
+    console.log('[Toast Bridge] プロセスを終了中...')
+    const processToKill = toastBridgeProcess
+    toastBridgeProcess = null // すぐにnullにして、再起動を防ぐ
+    
+    try {
+      // stdinを先に閉じる（プロセスに終了シグナルを送る）
+      if (processToKill.stdin && !processToKill.stdin.destroyed) {
+        processToKill.stdin.end()
+      }
+      
+      // WindowsとmacOS/Linuxで異なる方法で終了
+      if (process.platform === 'win32') {
+        // Windows: kill()を呼ぶ（シグナル指定なし）
+        processToKill.kill()
+        
+        // 500ms待ってから強制終了を試みる
+        setTimeout(() => {
+          if (processToKill && !processToKill.killed) {
+            console.log('[Toast Bridge] プロセスが終了しないため、強制終了します')
+            try {
+              processToKill.kill()
+            } catch (e) {
+              console.error('[Toast Bridge] 強制終了エラー:', e)
+            }
+          }
+        }, 500)
+      } else {
+        // macOS/Linux: SIGTERMを送信（graceful shutdown）
+        processToKill.kill('SIGTERM')
+        
+        // 500ms待ってからSIGKILLで強制終了
+        setTimeout(() => {
+          if (processToKill && !processToKill.killed) {
+            console.log('[Toast Bridge] プロセスが終了しないため、強制終了します')
+            try {
+              processToKill.kill('SIGKILL')
+            } catch (e) {
+              console.error('[Toast Bridge] 強制終了エラー:', e)
+            }
+          }
+        }, 500)
+      }
+    } catch (error) {
+      console.error('[Toast Bridge] プロセス終了エラー:', error)
+    }
   }
 }
 
@@ -506,4 +550,17 @@ app.whenReady().then(createWindow)
 // アプリ終了時にPythonプロセスをクリーンアップ
 app.on('before-quit', () => {
   stopToastBridge()
+})
+
+// アプリ終了時（will-quit）にも確実にクリーンアップ
+app.on('will-quit', (event) => {
+  if (toastBridgeProcess) {
+    console.log('[Toast Bridge] will-quit: プロセスを強制終了します')
+    stopToastBridge()
+    // プロセスが確実に終了するまで少し待つ
+    event.preventDefault()
+    setTimeout(() => {
+      app.exit(0)
+    }, 100)
+  }
 })

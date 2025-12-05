@@ -61,7 +61,6 @@ VOLUME_MIN = 0               # 音量の最小値
 VOLUME_MAX = 100             # 音量の最大値
 
 # グローバル変数（複数タスク間で共有）
-speaker = None
 current_volume = VOLUME_LEVEL
 current_voice_name = TARGET_VOICE_NAME  # 現在選択されている音声名（空の場合は読み上げ無効）
 main_loop = None  # メインイベントループへの参照
@@ -199,16 +198,16 @@ async def change_voice(voice_name: str = None):
     """
     音声を変更する（非同期関数）
     
-    グローバルのspeakerオブジェクトを新しい音声で再作成する
+    音声設定を変更する（実際の接続は読み上げ時に確立される）
     
     Args:
         voice_name: 変更する音声名（Noneまたは空文字列の場合は読み上げ無効）
     
     Note:
-        COMオブジェクトはスレッドセーフではないため、
-        メインスレッドで実行する必要がある
+        CeVIO Alの同時アクセス制限対策のため、接続は読み上げ時のみ確立される。
+        この関数は音声設定を変更するだけで、実際の接続は確立しない。
     """
-    global speaker, current_voice_name, current_volume
+    global current_voice_name
     
     try:
         # Noneまたは空文字列の場合は空文字列に統一
@@ -218,13 +217,6 @@ async def change_voice(voice_name: str = None):
         
         if target_voice:
             log_debug(f"change_voice: 音声を変更します: {target_voice}")
-        else:
-            log_debug("change_voice: 音声を無効化します（読み上げ停止）")
-        
-        # 新しい音声でspeakerを再作成（空の場合はNoneが返される）
-        new_speaker = create_sapi_speaker(volume=current_volume, voice_name=target_voice)
-        if new_speaker:
-            speaker = new_speaker
             send_json({
                 "type": "info",
                 "source": "toast_bridge",
@@ -233,45 +225,30 @@ async def change_voice(voice_name: str = None):
                 "timestamp": datetime.now().isoformat()
             })
             
-            # 音声変更成功時、Electron側に情報を送信し、読み上げる
-            # ただし、起動時の初回設定時（previous_voiceが空）は読み上げのみ、手動変更時はメッセージ送信+読み上げ
+            # 音声変更成功時、読み上げる（読み上げ時に接続が確立される）
             if previous_voice and previous_voice.strip():
-                # 手動で音声を変更した場合
-                """
-                send_json({
-                    "type": "info",
-                    "source": "toast_bridge",
-                    "title": "音声を変更しました",
-                    "message": target_voice,
-                    "timestamp": datetime.now().isoformat()
-                })
-                """
-            
-            # 読み上げテキストを生成して読み上げ
-            speech_text = f"音声を変更しました: {target_voice}"
-            await speak_text(speech_text)
+                # 手動で音声を変更した場合のみ読み上げ
+                speech_text = f"音声を変更しました: {target_voice}"
+                await speak_text(speech_text)
         else:
-            speaker = None
-            if target_voice:
-                log_error(f"音声の変更に失敗しました: {target_voice}")
-            else:
-                # 音声が空文字列で設定された場合（読み上げ無効化）
-                if previous_voice and previous_voice.strip():
-                    # 以前音声が設定されていた場合はメッセージ送信
-                    send_json({
-                        "type": "info",
-                        "source": "toast_bridge",
-                        "title": "音声設定",
-                        "message": "音声が設定されていません。読み上げは無効です。プルダウンで音声を選択してください。",
-                        "timestamp": datetime.now().isoformat()
-                    })
+            log_debug("change_voice: 音声を無効化します（読み上げ停止）")
+            # 音声が空文字列で設定された場合（読み上げ無効化）
+            if previous_voice and previous_voice.strip():
+                # 以前音声が設定されていた場合はメッセージ送信
                 send_json({
                     "type": "info",
                     "source": "toast_bridge",
-                    "title": "音声が無効化されました",
-                    "message": "読み上げは行われません。",
+                    "title": "音声設定",
+                    "message": "音声が設定されていません。読み上げは無効です。プルダウンで音声を選択してください。",
                     "timestamp": datetime.now().isoformat()
                 })
+            send_json({
+                "type": "info",
+                "source": "toast_bridge",
+                "title": "音声が無効化されました",
+                "message": "読み上げは行われません。",
+                "timestamp": datetime.now().isoformat()
+            })
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
@@ -444,22 +421,24 @@ def process_notification_for_speech(log: dict) -> str:
 async def speak_text(text: str):
     """
     テキストを読み上げる（非同期ラッパー）
-    メインスレッドで作成したspeakerオブジェクトを使用
+    読み上げ時のみSAPI接続を確立し、完了後に解放する（CeVIO Alの同時アクセス制限対策）
     
     処理の流れ:
-    1. テキストの検証（空文字チェック、speaker初期化チェック）
+    1. テキストの検証（空文字チェック、音声設定チェック）
     2. 英語を片仮名に変換（convert_english_to_katakana）
-    3. SAPIスピーカーで読み上げ実行
-    4. 読み上げ完了まで待機
+    3. 読み上げ用のSAPIスピーカーを作成
+    4. SAPIスピーカーで読み上げ実行
+    5. 読み上げ完了まで待機
+    6. SAPIスピーカーを解放（CeVIO Alの接続を切断）
     
     Args:
         text: 読み上げるテキスト
     
     Note:
-        COMオブジェクト（SAPI.SpVoice）はスレッドセーフではないため、
-        メインスレッドで作成したspeakerオブジェクトを使用する必要がある
+        CeVIO Alの外部連携インターフェイスは同時に1アプリケーションのみアクセス可能。
+        読み上げ完了後に接続を解放することで、他のアプリケーションがアクセスできるようにする。
     """
-    global speaker, current_volume, current_voice_name
+    global current_volume, current_voice_name
     
     # テキストが空の場合は処理を中断
     if not text or not text.strip():
@@ -471,12 +450,14 @@ async def speak_text(text: str):
         log_debug("speak_text: 音声が設定されていないためスキップ（読み上げ無効）")
         return
     
-    # speakerが初期化されていない場合はスキップ
-    if not speaker:
-        log_debug("speak_text: speakerが初期化されていないためスキップ")
-        return
-    
+    # 読み上げ用のSAPIスピーカーを作成（CeVIO Alの接続を確立）
+    temp_speaker = None
     try:
+        temp_speaker = create_sapi_speaker(volume=current_volume, voice_name=current_voice_name)
+        if not temp_speaker:
+            log_debug("speak_text: SAPIスピーカーの作成に失敗しました")
+            return
+        
         # 変換前のテキストを保存（ログ用）
         original_text = text
         log_debug(f"speak_text: 変換前テキスト: {original_text[:100]}...")
@@ -494,27 +475,46 @@ async def speak_text(text: str):
         log_debug(f"speak_text: (音量) {current_volume}")
         log_debug(f"speak_text: (text) {text}")
         
-        # SAPIスピーカーの音量を設定
-        # グローバル変数current_volumeの値を反映
-        speaker.Volume = current_volume
-        
         # 使用中の音声情報をログに出力（デバッグ用）
         try:
-            current_voice = speaker.Voice
+            current_voice = temp_speaker.Voice
             voice_desc = current_voice.GetDescription() if current_voice else "None"
             log_debug(f"SAPI音声: {voice_desc}, 音量: {current_volume}")
+            
+            # CeVIO Alの場合、接続確立に時間がかかる可能性があるため、少し待機
+            if "CeVIO" in voice_desc or "cevio" in voice_desc.lower():
+                log_debug("CeVIO Al音声を検出しました。接続確立を待機中...")
+                await asyncio.sleep(0.5)  # 500ms待機して接続確立を待つ
         except Exception as voice_error:
             # 音声情報の取得に失敗しても読み上げは続行
             log_debug(f"音声情報取得エラー: {voice_error}")
         
         # 非同期フラグで読み上げを開始
         # SAPI_SPEAK_ASYNC_FLAGを使用することで、読み上げを非同期で実行
-        speaker.Speak(text, SAPI_SPEAK_ASYNC_FLAG)
+        log_debug(f"speak_text: Speak()を呼び出します: text='{text[:50]}...'")
+        try:
+            result = temp_speaker.Speak(text, SAPI_SPEAK_ASYNC_FLAG)
+            log_debug(f"speak_text: Speak()の戻り値: {result}")
+        except Exception as speak_error:
+            log_error(f"speak_text: Speak()エラー: {speak_error}")
+            import traceback
+            log_error(traceback.format_exc())
+            return
+        
+        # 読み上げ開始を確認するため、少し待機（CeVIO Alの場合、接続確立に時間がかかる）
+        await asyncio.sleep(0.3)  # 300ms待機して読み上げ開始を確認
+        
+        # 読み上げ開始状態を確認
+        try:
+            status = temp_speaker.Status
+            log_debug(f"speak_text: Speak()直後のStatus: RunningState={status.RunningState}, CurrentStreamNumber={status.CurrentStreamNumber}")
+        except Exception as status_error:
+            log_debug(f"speak_text: Status取得エラー: {status_error}")
         
         # 読み上げが完了するまで待つ
         # COMオブジェクトはスレッドセーフではないため、別スレッドで実行
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, _wait_for_speech_completion, speaker)
+        await loop.run_in_executor(None, _wait_for_speech_completion, temp_speaker)
         
         log_debug(f"speak_text: 読み上げ完了")
         
@@ -523,6 +523,34 @@ async def speak_text(text: str):
         import traceback
         error_detail = traceback.format_exc()
         log_error(f"読み上げエラー: {e}\n{error_detail}")
+    finally:
+        # 読み上げ完了後にSAPIスピーカーを解放（CeVIO Alの接続を切断）
+        if temp_speaker:
+            try:
+                # 解放前の状態を確認
+                try:
+                    final_status = temp_speaker.Status
+                    log_debug(f"speak_text: 解放前の状態 - RunningState={final_status.RunningState}, CurrentStreamNumber={final_status.CurrentStreamNumber}")
+                except:
+                    pass
+                
+                # COMオブジェクトを明示的に解放
+                # ただし、読み上げ中の場合、少し待機してから解放
+                try:
+                    if temp_speaker.Status.RunningState != 0:
+                        log_debug("speak_text: 読み上げ中のため、解放前に少し待機します")
+                        import time
+                        time.sleep(0.5)  # 500ms待機
+                except:
+                    pass
+                
+                del temp_speaker
+                # ガベージコレクションを促す
+                import gc
+                gc.collect()
+                log_debug("speak_text: SAPIスピーカーを解放しました（CeVIO Al接続を切断）")
+            except Exception as e:
+                log_debug(f"speak_text: SAPIスピーカーの解放中にエラー: {e}")
 
 
 def _wait_for_speech_completion(speaker_obj):
@@ -541,10 +569,109 @@ def _wait_for_speech_completion(speaker_obj):
         run_in_executorを使用する必要がある
     """
     try:
-        # WaitUntilDoneで読み上げ完了を待つ（最大60秒）
-        # 60秒を超える場合はタイムアウトするが、読み上げは続行される
-        speaker_obj.WaitUntilDone(60)
-        log_debug("読み上げ完了（WaitUntilDone）")
+        # 読み上げが開始されているか確認（Statusプロパティをチェック）
+        # Statusが0以外の場合、読み上げ中または待機中
+        import time
+        log_debug("_wait_for_speech_completion: 読み上げ開始確認を開始")
+        max_wait = 5  # 最大5秒待機
+        wait_count = 0
+        running_state_checked = False
+        
+        while wait_count < max_wait:
+            try:
+                status = speaker_obj.Status
+                running_state = status.RunningState
+                current_stream = status.CurrentStreamNumber
+                
+                if not running_state_checked:
+                    log_debug(f"_wait_for_speech_completion: 初期状態 - RunningState={running_state}, CurrentStreamNumber={current_stream}")
+                    running_state_checked = True
+                
+                if running_state != 0:  # 0以外は読み上げ中または待機中
+                    log_debug(f"_wait_for_speech_completion: 読み上げ開始を確認: RunningState={running_state}, CurrentStreamNumber={current_stream}")
+                    break
+            except Exception as status_error:
+                log_debug(f"_wait_for_speech_completion: Status取得エラー: {status_error}")
+            
+            time.sleep(0.1)  # 100ms待機
+            wait_count += 0.1
+        
+        if wait_count >= max_wait:
+            log_error("_wait_for_speech_completion: 読み上げ開始確認がタイムアウトしました")
+        
+        # CeVIO Alの場合、WaitUntilDoneが正しく動作しない可能性があるため、
+        # RunningStateをポーリングして読み上げ完了を確認する
+        log_debug("_wait_for_speech_completion: 読み上げ完了を待機中...")
+        max_completion_wait = 60  # 最大60秒待機
+        completion_wait_count = 0
+        check_interval = 0.1  # 100msごとにチェック
+        last_running_state = None
+        state_change_time = 0
+        state_1_start_time = None  # RunningState=1になった時点を記録
+        state_1_timeout = 2.0  # RunningState=1が2秒続いたら完了とみなす（CeVIO Al対策）
+        completed_by_timeout = False  # タイムアウトで完了とみなしたかどうか
+        
+        while completion_wait_count < max_completion_wait:
+            try:
+                status = speaker_obj.Status
+                running_state = status.RunningState
+                
+                # RunningStateが0になったら読み上げ完了
+                if running_state == 0:
+                    log_debug(f"_wait_for_speech_completion: 読み上げ完了を確認: RunningState={running_state}")
+                    break
+                
+                # 状態が変化したかチェック
+                if running_state != last_running_state:
+                    last_running_state = running_state
+                    state_change_time = completion_wait_count
+                    log_debug(f"_wait_for_speech_completion: RunningStateが変化: {running_state}, 経過時間={completion_wait_count:.1f}秒")
+                    
+                    # RunningState=2から1に変化した時点で、読み上げが開始されたことを記録
+                    if running_state == 1:
+                        state_1_start_time = completion_wait_count
+                        log_debug(f"_wait_for_speech_completion: RunningState=1（読み上げ中）に変化しました。読み上げ開始時刻を記録")
+                
+                # RunningState=1（読み上げ中）が一定時間続いたら、読み上げが完了したとみなす
+                # CeVIO Alの場合、RunningState=2（待機中）から1（読み上げ中）に変化した後、
+                # 1が一定時間続いたら完了とみなす
+                if running_state == 1 and state_1_start_time is not None:
+                    elapsed_since_state_1 = completion_wait_count - state_1_start_time
+                    if elapsed_since_state_1 >= state_1_timeout:
+                        log_debug(f"_wait_for_speech_completion: RunningState=1が{elapsed_since_state_1:.1f}秒続いたため、読み上げ完了とみなします")
+                        completed_by_timeout = True
+                        # 少し追加で待機してから完了とする（読み上げが確実に終わるように）
+                        time.sleep(0.3)
+                        break
+                
+                # 定期的にログを出力（5秒ごと）
+                if int(completion_wait_count * 10) % 50 == 0 and completion_wait_count > 0:
+                    log_debug(f"_wait_for_speech_completion: 読み上げ待機中... RunningState={running_state}, 経過時間={completion_wait_count:.1f}秒")
+            except Exception as status_error:
+                log_debug(f"_wait_for_speech_completion: Status取得エラー: {status_error}")
+            
+            time.sleep(check_interval)
+            completion_wait_count += check_interval
+        
+        # 最終状態を確認
+        try:
+            final_status = speaker_obj.Status
+            final_running_state = final_status.RunningState
+            log_debug(f"_wait_for_speech_completion: 最終状態 - RunningState={final_running_state}, CurrentStreamNumber={final_status.CurrentStreamNumber}, 経過時間={completion_wait_count:.1f}秒")
+            
+            # タイムアウトで完了とみなした場合は、RunningState=1でもエラーとしない
+            if final_running_state != 0 and not completed_by_timeout:
+                log_error(f"_wait_for_speech_completion: 読み上げが完了していません。RunningState={final_running_state}")
+                # WaitUntilDoneも試してみる（念のため）
+                try:
+                    wait_result = speaker_obj.WaitUntilDone(5)
+                    log_debug(f"_wait_for_speech_completion: WaitUntilDone(5)の戻り値: {wait_result}")
+                except Exception as wait_error:
+                    log_debug(f"_wait_for_speech_completion: WaitUntilDoneエラー: {wait_error}")
+            elif completed_by_timeout:
+                log_debug(f"_wait_for_speech_completion: タイムアウトで完了とみなしたため、RunningState={final_running_state}でも正常終了とします")
+        except Exception as final_status_error:
+            log_debug(f"_wait_for_speech_completion: 最終状態取得エラー: {final_status_error}")
     except Exception as e:
         # WaitUntilDoneでエラーが発生しても読み上げは続行される可能性がある
         log_error(f"WaitUntilDoneエラー: {e}")
@@ -575,7 +702,7 @@ async def notification_loop(listener):
     WindowsのToast通知を監視し、新規通知をJSON形式でstdoutに送信する
     通知を取得したら自動で読み上げる
     """
-    global speaker, current_volume
+    global current_volume
     
 
     processed_ids = set()
@@ -724,7 +851,7 @@ def blocking_read():
     stdinからJSONメッセージを読み取り、処理する
     別スレッドで実行されるため、このスレッド内でCOMを初期化する必要がある
     """
-    global speaker, current_volume, main_loop
+    global current_volume, main_loop
     
     pythoncom.CoInitialize()
     try:
@@ -799,9 +926,10 @@ async def stdin_loop():
 async def main():
     """
     メイン関数
-    SAPI初期化、通知監視、stdinループを同時に実行する
+    通知監視、stdinループを同時に実行する
+    CeVIO Alの同時アクセス制限対策のため、SAPI接続は読み上げ時のみ確立される
     """
-    global speaker, current_volume, main_loop
+    global current_volume, main_loop
     
     # メインイベントループへの参照を保存
     main_loop = asyncio.get_running_loop()
@@ -843,28 +971,13 @@ async def main():
     })
     log_debug(f"利用可能な音声数: {len(available_voices)}")
 
-    # SAPI初期化（メインスレッドで）
+    # 音声設定の確認（CeVIO Alの同時アクセス制限対策のため、接続は読み上げ時のみ確立）
     # 起動時は音声設定を待機する（Electron側から送られてくるまで待機）
-    # 音声名が空の場合はspeakerはNoneのまま（読み上げ無効）
-    # 起動時にはメッセージを送信せず、Electron側からset_voiceコマンドが送られてきたときに処理する
     if current_voice_name and current_voice_name.strip():
-        speaker = setup_sapi(voice_name=current_voice_name)
-        if not speaker:
-            log_error(f"SAPI初期化に失敗しました（音声名: {current_voice_name}）")
-            # エラーでも続行（読み上げ無効の状態で動作）
-            speaker = None
-        else:
-            send_json({
-                "type": "info",
-                "source": "toast_bridge",
-                "title": "SAPI初期化完了",
-                "message": f"音声: {current_voice_name}",
-                "timestamp": datetime.now().isoformat()
-            })
+        log_debug(f"音声設定: {current_voice_name}（接続は読み上げ時に確立されます）")
     else:
         # 起動時は音声設定を待機するだけ（メッセージ送信なし）
         log_debug("音声が設定されていません。Electron側からの音声設定を待機中...")
-        speaker = None
 
     # 通知リスナーを取得
     listener = await get_listener()
