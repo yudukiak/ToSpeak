@@ -58,17 +58,14 @@ try {
       'Accept': 'application/vnd.github.v3+json',
     },
   });
-
   if (!getResponse.ok) {
     throw new Error(`リリースの取得に失敗しました: ${getResponse.status} ${getResponse.statusText}`);
   }
-
   const releases = await getResponse.json();
-  console.log("releases", releases);
+  console.log("発行済のリリース: ", releases);
   
   // ドラフトを含む、タグ名でリリースを検索
   const release = releases.find(r => r.tag_name === tag);
-  
   if (!release) {
     // 編集時にTagが変わるので注意
     console.error(`❌ リリースが見つかりません: ${tag}`);
@@ -77,9 +74,8 @@ try {
     process.exit(1);
   }
 
-  const releaseId = release.id;
-
   // リリースノートを更新
+  const releaseId = release.id;
   const updateResponse = await fetch(`${updateReleaseUrl}/${releaseId}`, {
     method: 'PATCH',
     headers: {
@@ -92,10 +88,37 @@ try {
       body: releaseNotes,
     }),
   });
-
   if (!updateResponse.ok) {
     const errorText = await updateResponse.text();
     throw new Error(`リリースノートの更新に失敗しました: ${updateResponse.status} ${updateResponse.statusText}\n${errorText}`);
+  }
+
+  const updatedRelease = await updateResponse.json();
+  console.log("更新後のリリース: ", updatedRelease);  
+
+  // タグを付与
+  const fixResponse = await fetch(`${updateReleaseUrl}/${releaseId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tag_name: tag,  // タグ名を元に戻す
+      name: releaseTitle,
+      body: releaseNotes,
+    }),
+  });
+
+  if (!fixResponse.ok) {
+    const errorText = await fixResponse.text();
+    console.error(`❌ タグ名の修正に失敗しました: ${fixResponse.status} ${fixResponse.statusText}\n${errorText}`);
+    console.error(`💡 手動でGitHub上でタグ名を修正してください`);
+  } else {
+    const fixedRelease = await fixResponse.json();
+    console.log("修正後のリリース: ", fixedRelease);
+    console.log(`✅ タグ名を修正しました: ${fixedRelease.tag_name}`);
   }
 
   console.log(`✅ GitHub Releaseのリリースノートを更新しました: ${tag}`);
