@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { spawn, ChildProcess } from 'child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -6,9 +7,51 @@ import { existsSync } from 'node:fs'
 
 // 自動更新の設定（本番環境のみ）
 if (app.isPackaged) {
-  require('update-electron-app')({
-    repo: 'yudukiak/ToSpeak',
-    updateInterval: '1 hour'
+  // electron-updaterの設定
+  // electron-builder.json5のpublish設定を自動的に読み取る
+  // 自動ダウンロードを無効化（ユーザー確認後に手動でダウンロード開始）
+  autoUpdater.autoDownload = false
+
+  // autoUpdaterのイベントを監視してレンダラーに通知
+  autoUpdater.on('update-available', (info) => {
+    console.log('更新が利用可能です:', info)
+    // ダウンロードは開始しない（ユーザー確認後に手動で開始）
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('update-available', {
+        version: info.version || 'unknown',
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes,
+        releaseName: info.releaseName
+      })
+    }
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('更新のダウンロードが完了しました:', info)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('update-downloaded', {
+        version: info.version || 'unknown',
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes,
+        releaseName: info.releaseName
+      })
+    }
+  })
+
+  autoUpdater.on('error', (error) => {
+    console.error('自動更新エラー:', error)
+  })
+
+  // 1時間ごとに更新を確認（ダウンロードは開始しない）
+  setInterval(() => {
+    autoUpdater.checkForUpdates()
+  }, 60 * 60 * 1000) // 1時間
+
+  // 起動時にも更新を確認
+  app.whenReady().then(() => {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates()
+    }, 5000) // 5秒後に確認（アプリ起動を優先）
   })
 }
 
@@ -417,6 +460,26 @@ ipcMain.on('window-close', () => {
 // IPCハンドラー: 保持されているログを取得
 ipcMain.handle('get-stored-logs', () => {
   return storedLogs
+})
+
+// IPCハンドラー: アプリを再起動して更新を適用
+ipcMain.on('restart-and-install', () => {
+  if (app.isPackaged) {
+    autoUpdater.quitAndInstall()
+  }
+})
+
+// IPCハンドラー: 更新のダウンロードを開始（ユーザー確認後）
+ipcMain.on('download-update', () => {
+  if (app.isPackaged) {
+    console.log('ユーザーが更新のダウンロードを承認しました')
+    autoUpdater.downloadUpdate()
+  }
+})
+
+// IPCハンドラー: 外部ブラウザでURLを開く
+ipcMain.on('open-external', (_event, url: string) => {
+  shell.openExternal(url)
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

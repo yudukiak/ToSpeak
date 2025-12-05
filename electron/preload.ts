@@ -19,6 +19,14 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     return ipcRenderer.invoke(channel, ...omit)
   },
 
-  // You can expose other APTs you need here.
-  // ...
+  // 更新関連
+  sendUpdateRestart: () => {
+    ipcRenderer.send('restart-and-install')
+  },
+  sendDownloadUpdate: () => {
+    ipcRenderer.send('download-update')
+  },
+  openExternal: (url: string) => {
+    ipcRenderer.send('open-external', url)
+  },
 })

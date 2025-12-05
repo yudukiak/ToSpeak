@@ -4,6 +4,8 @@ import { Header } from "@/components/Header";
 import { NotificationLog } from "@/components/notification-log";
 import { SettingsDrawer } from "@/components/settings-drawer";
 import { Badge } from "@/components/ui/badge";
+import { Toaster } from "@/components/ui/sonner";
+import { UpdateNotification } from "@/components/update-notification";
 import { useToastLogs } from "./contexts/use-toast-logs";
 import { useSettings } from "./contexts/use-settings";
 import "./App.css";
@@ -58,6 +60,8 @@ function App() {
         </section>
         <NotificationLog logs={logs} />
       </main>
+      <Toaster theme="dark" richColors />
+      <UpdateNotification />
     </>
   );
 }
