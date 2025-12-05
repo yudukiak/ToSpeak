@@ -18,11 +18,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:bridge": "pyinstaller toast_bridge.spec --clean --noconfirm --distpath dist-python --workpath dist-python",
     "build:clean": "rimraf release || echo Cleanup skipped",
     "prebuild": "npm run build:clean && npm run build:bridge",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "build:bridge": "pyinstaller toast_bridge.spec --clean --noconfirm --distpath dist-python --workpath dist-python"
+    "publish": "dotenv -e .env -- electron-builder --publish=always"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -45,6 +45,7 @@
     "react-router-dom": "^7.9.6",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17",
+    "update-electron-app": "^3.1.1",
     "vaul": "^1.1.2"
   },
   "devDependencies": {
@@ -53,6 +54,7 @@
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",
     "@vitejs/plugin-react": "^4.2.1",
+    "dotenv-cli": "^11.0.0",
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
     "eslint": "^8.57.0",

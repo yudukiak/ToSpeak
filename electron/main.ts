@@ -4,6 +4,14 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { existsSync } from 'node:fs'
 
+// 自動更新の設定（本番環境のみ）
+if (app.isPackaged) {
+  require('update-electron-app')({
+    repo: 'yudukiak/ToSpeak',
+    updateInterval: '1 hour'
+  })
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
