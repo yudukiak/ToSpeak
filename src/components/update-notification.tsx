@@ -87,15 +87,15 @@ export function UpdateNotification() {
   // 更新が利用可能な場合の通知を表示（ダウンロードは開始しない）
   const showUpdateAvailableNotification = useCallback((info: UpdateInfo) => {
     const config: UpdateNotificationConfig = {
-      title: `v${info.version} が利用可能です`,
-      description: `新しい ToSpeak をダウンロードして更新しますか？`,
+      title: `ToSpeak v${info.version} が利用可能です`,
+      description: `ダウンロードしてインストールしますか？`,
       primaryButtonLabel: "ダウンロードする",
       primaryButtonAriaLabel: "ダウンロードする",
       onPrimaryAction: () => {
         if (typeof window !== "undefined" && window.ipcRenderer) {
           window.ipcRenderer.sendDownloadUpdate();
           toast.dismiss("update-available-notification");
-          toast.info("更新のダウンロードを開始しました...", {
+          toast.info("更新ファイルのダウンロードを開始しました...", {
             duration: 3000,
             id: "update-downloading"
           });
@@ -118,8 +118,8 @@ export function UpdateNotification() {
   // ダウンロード完了時の通知を表示
   const showUpdateDownloadedNotification = useCallback((info: UpdateInfo) => {
     const config: UpdateNotificationConfig = {
-      title: `v${info.version} のダウンロードが完了しました`,
-      description: `ToSpeak を再起動して更新しますか？`,
+      title: `ToSpeak v${info.version} のダウンロードが完了しました`,
+      description: `再起動してインストールしますか？`,
       primaryButtonLabel: "再起動する",
       primaryButtonAriaLabel: "再起動する",
       onPrimaryAction: () => {
