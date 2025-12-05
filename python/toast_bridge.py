@@ -490,7 +490,9 @@ async def speak_text(text: str):
         if original_text != text:
             log_debug(f"speak_text: 英語を片仮名に変換しました: {original_text[:50]}... → {text[:50]}...")
         
-        log_debug(f"speak_text: 読み上げ開始 {text[:50]}... (音量: {current_volume})")
+        log_debug(f"speak_text: 読み上げ開始")
+        log_debug(f"speak_text: (音量) {current_volume}")
+        log_debug(f"speak_text: (text) {text}")
         
         # SAPIスピーカーの音量を設定
         # グローバル変数current_volumeの値を反映
