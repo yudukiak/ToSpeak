@@ -1,8 +1,20 @@
 {
   "name": "tospeak",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "ToSpeak is a tool that allows you to speak notifications on your computer.",
+  "homepage": "https://github.com/yudukiak/ToSpeak",
+  "bugs": {
+    "url": "https://github.com/yudukiak/ToSpeak/issues"
+  },
+  "license": "MIT",
+  "author": "yudukiak",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yudukiak/ToSpeak.git"
+  },
+  "main": "dist-electron/main.js",
   "type": "module",
+  "private": true,
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
@@ -52,6 +64,5 @@
     "vite": "^5.1.6",
     "vite-plugin-electron": "^0.28.6",
     "vite-plugin-electron-renderer": "^0.14.5"
-  },
-  "main": "dist-electron/main.js"
+  }
 }
