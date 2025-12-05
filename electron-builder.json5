@@ -11,7 +11,8 @@
     "provider": "github",
     "owner": "yudukiak",
     "repo": "ToSpeak",
-    "releaseType": "draft"
+    "releaseType": "draft",
+    "releaseNotesFile": "RELEASE_NOTES.md"
   },
   "files": [
     "dist",

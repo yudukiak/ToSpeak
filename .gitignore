@@ -13,6 +13,7 @@ dist-ssr
 dist-electron
 dist-python
 release
+RELEASE_NOTES.md
 *.local
 
 # Editor directories and files
