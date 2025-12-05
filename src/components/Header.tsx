@@ -21,7 +21,7 @@ export function Header() {
   };
 
   return (
-    <header className="h-8 flex justify-between bg-neutral-900 relative z-100 select-none [-webkit-app-region:drag] pointer-events-auto">
+    <header className="h-8 flex justify-between bg-zinc-900 relative z-100 select-none [-webkit-app-region:drag] pointer-events-auto">
       <div className="flex justify-center items-center text-xs ml-2 gap-2">
         <span className="font-bold">ToSpeak</span>
         <span className="text-gray-400">v{packageJson.version}</span>

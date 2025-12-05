@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva("w-12 h-full flex justify-center items-center cursor-pointer", {
   variants: {
     variant: {
-      default: "hover:bg-gray-700",
-      minimize: "hover:bg-gray-700",
+      default: "hover:bg-zinc-700",
+      minimize: "hover:bg-zinc-700",
       close: "hover:bg-red-700",
     },
   },
