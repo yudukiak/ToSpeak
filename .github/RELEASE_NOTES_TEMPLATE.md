@@ -18,4 +18,4 @@
 
 ## 📦 ダウンロード
 
-[ToSpeak-Windows-${version}-Setup.exe](https://github.com/yudukiak/ToSpeak/releases/tag/v${version})
+[ToSpeak-Windows-${version}-Setup.exe](https://github.com/yudukiak/ToSpeak/releases/download/v${version}/ToSpeak-Windows-${version}-Setup.exe)
