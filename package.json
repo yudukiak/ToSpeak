@@ -24,8 +24,8 @@
     "build:clean": "rimraf release || echo Cleanup skipped",
     "prebuild": "npm run build:clean && npm run build:bridge",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "generate-release-notes": "node scripts/generate-release-notes.js",
-    "publish": "npm run generate-release-notes && npm run build:clean && npm run build:bridge && npm run build:app && dotenv -e .env -- electron-builder --publish=always"
+    "update-github-release-notes": "node scripts/update-github-release-notes.js",
+    "publish": "npm run build:clean && npm run build:bridge && npm run build:app && dotenv -e .env -- electron-builder --publish=always && npm run update-github-release-notes"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -60,6 +60,7 @@
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",
     "@vitejs/plugin-react": "^4.2.1",
+    "dotenv": "^17.2.3",
     "dotenv-cli": "^11.0.0",
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
