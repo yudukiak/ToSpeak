@@ -4,6 +4,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import safeRegex from "safe-regex";
 import { ToastLogContext } from "./toast-log-context";
 import type { Settings } from "./SettingsContext";
 import type { BlockedApp, Replacement } from "@/types/settings";
@@ -48,53 +49,8 @@ const lastSpokenNotificationRef = {
 const MAX_PATTERN_LENGTH = 1000; // パターンの最大長
 
 /**
- * 危険な正規表現パターン（evil regex）を検出
- * ReDoS攻撃を防ぐため、以下のパターンを拒否：
- * - ネストした量指定子: (a+)+, (a*)*, (a?)+ など
- * - 重複する選択肢: (a|a)+, (a|aa)+ など
- * - 重複する量指定子: \d+\d+ など
- */
-function isSafeRegexPattern(pattern: string): boolean {
-  // パターンの長さをチェック
-  if (pattern.length > MAX_PATTERN_LENGTH) {
-    return false;
-  }
-
-  // 危険なパターンを検出
-  // 1. ネストした量指定子: (a+)+, (a*)*, (a?)+, (a+)*, (a*)+ など
-  // 括弧内に量指定子があり、その括弧全体にも量指定子があるパターン
-  const nestedQuantifierPattern = /\([^)]*[+*?][^)]*\)[+*?]|\([^)]*\)[+*?]\s*[+*?]/;
-  if (nestedQuantifierPattern.test(pattern)) {
-    return false;
-  }
-
-  // 2. 重複する量指定子の組み合わせ: \d+\d+, \w+\w+ など
-  // 同じ文字クラスやエスケープシーケンスが連続して量指定子付きで出現
-  const repeatedQuantifierPattern = /\\[dwsDSW]\+\\[dwsDSW]\+|\\[dwsDSW]\*\\[dwsDSW]\*/;
-  if (repeatedQuantifierPattern.test(pattern)) {
-    return false;
-  }
-
-  // 3. 複雑なネスト構造: ((a+)+)+ など（3段階以上のネスト）
-  // 開き括弧と閉じ括弧の数が多すぎる場合
-  const openParens = (pattern.match(/\(/g) || []).length;
-  const closeParens = (pattern.match(/\)/g) || []).length;
-  if (openParens > 50 || closeParens > 50) {
-    return false;
-  }
-
-  // 4. 量指定子の連続: +*, *+, ++, ** など（無効だが念のため）
-  const invalidQuantifierPattern = /[+*?]{2,}/;
-  if (invalidQuantifierPattern.test(pattern)) {
-    return false;
-  }
-
-  return true;
-}
-
-/**
  * 安全に正規表現置換を実行
- * ReDoS攻撃を防ぐため、パターンの安全性を事前にチェック
+ * ReDoS攻撃を防ぐため、safe-regexでパターンの安全性を事前にチェック
  */
 function safeRegexReplace(
   text: string,
@@ -102,8 +58,8 @@ function safeRegexReplace(
   replacement: string,
   flags: string = "gi"
 ): string {
-  // パターンの安全性をチェック
-  if (!isSafeRegexPattern(pattern)) {
+  // ReDoS対策: safe-regexでパターンの安全性をチェック
+  if (!safeRegex(pattern)) {
     console.warn("危険な正規表現パターンが検出されました。置換をスキップします:", pattern);
     return text;
   }
@@ -115,6 +71,11 @@ function safeRegexReplace(
     // 正規表現が無効な場合は通常の文字列マッチにフォールバック
     console.warn("無効な正規表現:", pattern, e);
     const escapedFrom = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // エスケープ後のパターンもsafe-regexでチェック
+    if (!safeRegex(escapedFrom)) {
+      console.warn("エスケープ後のパターンも危険です。置換をスキップします:", escapedFrom);
+      return text;
+    }
     return text.replace(new RegExp(escapedFrom, flags), replacement);
   }
 }
@@ -146,8 +107,8 @@ const processNotificationForSpeech = (log: ToastLog): string => {
         ): boolean => {
           if (!pattern || !value) return false;
           if (isRegex) {
-            // ReDoS対策: パターンの安全性をチェック
-            if (!isSafeRegexPattern(pattern)) {
+            // ReDoS対策: safe-regexでパターンの安全性をチェック
+            if (!safeRegex(pattern)) {
               console.warn("危険な正規表現パターンが検出されました。通常の文字列マッチにフォールバックします:", pattern);
               return value === pattern;
             }
@@ -234,7 +195,12 @@ const processNotificationForSpeech = (log: ToastLog): string => {
               /[.*+?^${}()|[\]\\]/g,
               "\\$&"
             );
-            text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
+            // ReDoS対策: safe-regexでエスケープ後のパターンの安全性をチェック
+            if (!safeRegex(escapedFrom)) {
+              console.warn("危険な正規表現パターンが検出されました。置換をスキップします:", escapedFrom);
+            } else {
+              text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
+            }
           }
         }
       }
@@ -247,12 +213,18 @@ const processNotificationForSpeech = (log: ToastLog): string => {
     if (consecutiveMinLength > 0) {
       // 同じ文字がn文字以上連続している場合、3文字に短縮
       // 正規表現: (.)\1{n-1,} で同じ文字がn文字以上連続している箇所を検出
-      const regex = new RegExp(`(.)\\1{${consecutiveMinLength - 1},}`, "g");
-      text = text.replace(regex, (match) => {
-        // 最初の文字を取得して、3文字分だけ繰り返す
-        const char = match[0];
-        return char.repeat(CONSECUTIVE_CHAR_MAX_LENGTH);
-      });
+      // ReDoS対策: パターンの安全性をチェック
+      const pattern = `(.)\\1{${consecutiveMinLength - 1},}`;
+      if (safeRegex(pattern)) {
+        const regex = new RegExp(pattern, "g");
+        text = text.replace(regex, (match) => {
+          // 最初の文字を取得して、3文字分だけ繰り返す
+          const char = match[0];
+          return char.repeat(CONSECUTIVE_CHAR_MAX_LENGTH);
+        });
+      } else {
+        console.warn("危険な正規表現パターンが検出されました。連続文字の短縮処理をスキップします:", pattern);
+      }
     }
 
     // 連続する空白や区切り文字を整理
