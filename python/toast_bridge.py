@@ -878,7 +878,7 @@ async def main():
       "type": "info",
       "source": "toast_bridge",
       "title": "お知らせ",
-      "message": "起動しました",
+      "message": "ToSpeak の起動を準備中",
       "timestamp": datetime.now().isoformat()
     })
 
@@ -992,7 +992,7 @@ async def main():
         "type": "ready",
         "source": "toast_bridge",
         "title": "お知らせ",
-        "message": "準備完了",
+        "message": "ToSpeak の起動を完了しました",
         "timestamp": datetime.now().isoformat(),
         "volume": VOLUME_LEVEL,
     })
