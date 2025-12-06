@@ -226,10 +226,9 @@ async def change_voice(voice_name: str = None):
             })
             
             # 音声変更成功時、読み上げる（読み上げ時に接続が確立される）
-            if previous_voice and previous_voice.strip():
-                # 手動で音声を変更した場合のみ読み上げ
-                speech_text = f"音声を変更しました: {target_voice}"
-                await speak_text(speech_text)
+            # 起動時（previous_voiceが空）も含めて、音声を設定/変更した場合は読み上げる
+            speech_text = f"音声を変更しました: {target_voice}"
+            await speak_text(speech_text)
         else:
             log_debug("change_voice: 音声を無効化します（読み上げ停止）")
             # 音声が空文字列で設定された場合（読み上げ無効化）
