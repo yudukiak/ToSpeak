@@ -44,6 +44,81 @@ const lastSpokenNotificationRef = {
   current: null as LastSpokenNotification | null,
 };
 
+// ReDoS対策: 正規表現パターンの安全性をチェック
+const MAX_PATTERN_LENGTH = 1000; // パターンの最大長
+
+/**
+ * 危険な正規表現パターン（evil regex）を検出
+ * ReDoS攻撃を防ぐため、以下のパターンを拒否：
+ * - ネストした量指定子: (a+)+, (a*)*, (a?)+ など
+ * - 重複する選択肢: (a|a)+, (a|aa)+ など
+ * - 重複する量指定子: \d+\d+ など
+ */
+function isSafeRegexPattern(pattern: string): boolean {
+  // パターンの長さをチェック
+  if (pattern.length > MAX_PATTERN_LENGTH) {
+    return false;
+  }
+
+  // 危険なパターンを検出
+  // 1. ネストした量指定子: (a+)+, (a*)*, (a?)+, (a+)*, (a*)+ など
+  // 括弧内に量指定子があり、その括弧全体にも量指定子があるパターン
+  const nestedQuantifierPattern = /\([^)]*[+*?][^)]*\)[+*?]|\([^)]*\)[+*?]\s*[+*?]/;
+  if (nestedQuantifierPattern.test(pattern)) {
+    return false;
+  }
+
+  // 2. 重複する量指定子の組み合わせ: \d+\d+, \w+\w+ など
+  // 同じ文字クラスやエスケープシーケンスが連続して量指定子付きで出現
+  const repeatedQuantifierPattern = /\\[dwsDSW]\+\\[dwsDSW]\+|\\[dwsDSW]\*\\[dwsDSW]\*/;
+  if (repeatedQuantifierPattern.test(pattern)) {
+    return false;
+  }
+
+  // 3. 複雑なネスト構造: ((a+)+)+ など（3段階以上のネスト）
+  // 開き括弧と閉じ括弧の数が多すぎる場合
+  const openParens = (pattern.match(/\(/g) || []).length;
+  const closeParens = (pattern.match(/\)/g) || []).length;
+  if (openParens > 50 || closeParens > 50) {
+    return false;
+  }
+
+  // 4. 量指定子の連続: +*, *+, ++, ** など（無効だが念のため）
+  const invalidQuantifierPattern = /[+*?]{2,}/;
+  if (invalidQuantifierPattern.test(pattern)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * 安全に正規表現置換を実行
+ * ReDoS攻撃を防ぐため、パターンの安全性を事前にチェック
+ */
+function safeRegexReplace(
+  text: string,
+  pattern: string,
+  replacement: string,
+  flags: string = "gi"
+): string {
+  // パターンの安全性をチェック
+  if (!isSafeRegexPattern(pattern)) {
+    console.warn("危険な正規表現パターンが検出されました。置換をスキップします:", pattern);
+    return text;
+  }
+
+  try {
+    const regex = new RegExp(pattern, flags);
+    return text.replace(regex, replacement);
+  } catch (e) {
+    // 正規表現が無効な場合は通常の文字列マッチにフォールバック
+    console.warn("無効な正規表現:", pattern, e);
+    const escapedFrom = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return text.replace(new RegExp(escapedFrom, flags), replacement);
+  }
+}
+
 // 通知データを加工して読み上げ用テキストを生成
 const processNotificationForSpeech = (log: ToastLog): string => {
   if (log.type === "notification") {
@@ -63,7 +138,7 @@ const processNotificationForSpeech = (log: ToastLog): string => {
     // 除外アプリのチェック
     if (
       settings.blockedApps.some((blocked: BlockedApp) => {
-        // 文字列マッチング関数（正規表現対応）
+        // 文字列マッチング関数（正規表現対応、ReDoS対策付き）
         const matchString = (
           value: string | undefined,
           pattern: string | undefined,
@@ -71,6 +146,11 @@ const processNotificationForSpeech = (log: ToastLog): string => {
         ): boolean => {
           if (!pattern || !value) return false;
           if (isRegex) {
+            // ReDoS対策: パターンの安全性をチェック
+            if (!isSafeRegexPattern(pattern)) {
+              console.warn("危険な正規表現パターンが検出されました。通常の文字列マッチにフォールバックします:", pattern);
+              return value === pattern;
+            }
             try {
               const regex = new RegExp(pattern);
               return regex.test(value);
@@ -142,25 +222,20 @@ const processNotificationForSpeech = (log: ToastLog): string => {
     settings.replacements.forEach((replacement: Replacement) => {
       if (replacement.from && replacement.to) {
         if (replacement.isRegex) {
-          // 正規表現として使用（エスケープしない）
-          try {
-            text = text.replace(new RegExp(replacement.from, "gi"), replacement.to);
-          } catch (e) {
-            // 正規表現が無効な場合は通常の文字列マッチにフォールバック
-            console.warn("無効な正規表現:", replacement.from, e);
+          // 正規表現として使用（ReDoS対策付き）
+          text = safeRegexReplace(text, replacement.from, replacement.to, "gi");
+        } else {
+          // 通常の文字列置換（エスケープして正規表現として使用、大文字小文字を区別しない）
+          // ReDoS対策: エスケープ後の文字列の長さもチェック
+          if (replacement.from.length > MAX_PATTERN_LENGTH) {
+            console.warn("置換パターンが長すぎます。置換をスキップします:", replacement.from);
+          } else {
             const escapedFrom = replacement.from.replace(
               /[.*+?^${}()|[\]\\]/g,
               "\\$&"
             );
             text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
           }
-        } else {
-          // 通常の文字列置換（エスケープして正規表現として使用、大文字小文字を区別しない）
-          const escapedFrom = replacement.from.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          );
-          text = text.replace(new RegExp(escapedFrom, "gi"), replacement.to);
         }
       }
     });
