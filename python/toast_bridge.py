@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # toast_bridge.py
-# pip install winsdk pywin32 e2k
+# pip install -r requirements.txt
 # WindowsのToast通知を取得してElectronに送信し、自動で読み上げる統合スクリプト
 
 import asyncio
