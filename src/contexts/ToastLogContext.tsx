@@ -416,13 +416,14 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
     isSetupRef.current = true;
   }
 
-  // 起動時に保持されているログを取得
+  // 起動時に保持されているログと利用可能な音声リストを取得
   useEffect(() => {
     if (logsLoadedRef.current) {
       return;
     }
     
     if (typeof window !== "undefined" && window.ipcRenderer) {
+      // 保持されているログを取得
       window.ipcRenderer.invoke("get-stored-logs").then((storedLogs: ToastLog[]) => {
         if (storedLogs && storedLogs.length > 0) {
           // 空のログをフィルタリング（title、text、messageがすべて空のログを除外）
@@ -442,6 +443,16 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
         }
       }).catch((error) => {
         console.error("Failed to get stored logs:", error);
+      });
+
+      // 保持されている利用可能な音声リストを取得
+      window.ipcRenderer.invoke("get-available-voices").then((voices: string[]) => {
+        if (voices && Array.isArray(voices) && voices.length > 0) {
+          setAvailableVoices(voices);
+          console.log(`[ToastLogContext] 保持されていた利用可能な音声: ${voices.length}件`);
+        }
+      }).catch((error) => {
+        console.error("Failed to get available voices:", error);
       });
     }
   }, []);

@@ -82,6 +82,8 @@ let win: BrowserWindow | null
 let toastBridgeProcess: ChildProcess | null = null
 // ログを保持する配列（リロード時も保持）
 const storedLogs: ToastLog[] = []
+// 利用可能な音声リストを保持（リロード時も保持）
+let storedAvailableVoices: string[] = []
 
 function createWindow() {
   win = new BrowserWindow({
@@ -229,6 +231,11 @@ function startToastBridge() {
             setTimeout(() => {
               setVolume(20)
             }, 100)
+          }
+          
+          // available_voicesメッセージを受信したら保持
+          if (message.type === 'available_voices' && message.voices && Array.isArray(message.voices)) {
+            storedAvailableVoices = message.voices
           }
           
           // debugタイプ以外のメッセージをReact側に転送
@@ -504,6 +511,11 @@ ipcMain.on('window-close', () => {
 // IPCハンドラー: 保持されているログを取得
 ipcMain.handle('get-stored-logs', () => {
   return storedLogs
+})
+
+// IPCハンドラー: 保持されている利用可能な音声リストを取得
+ipcMain.handle('get-available-voices', () => {
+  return storedAvailableVoices
 })
 
 // IPCハンドラー: アプリを再起動して更新を適用

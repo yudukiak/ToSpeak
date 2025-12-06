@@ -23,12 +23,17 @@ export function VoiceSettingsField({
   availableVoices,
   onVoiceChange,
 }: VoiceSettingsFieldProps) {
+  // voiceNameが存在するがavailableVoicesに含まれていない場合でも表示できるようにする
+  const allVoices = voiceName && !availableVoices.includes(voiceName)
+    ? [voiceName, ...availableVoices]
+    : availableVoices;
+
   return (
     <Field>
       <FieldLabel>音声</FieldLabel>
       <FieldContent>
         <Select
-          value={voiceName || ""}
+          value={voiceName || undefined}
           onValueChange={(value) => onVoiceChange(value || "")}
           aria-label="音声を選択"
         >
@@ -36,8 +41,8 @@ export function VoiceSettingsField({
             <SelectValue placeholder="音声を選択してください（読み上げ無効）" />
           </SelectTrigger>
           <SelectContent>
-            {availableVoices.length > 0 ? (
-              availableVoices.map((voice) => (
+            {allVoices.length > 0 ? (
+              allVoices.map((voice) => (
                 <SelectItem key={voice} value={voice}>
                   {voice}
                 </SelectItem>
