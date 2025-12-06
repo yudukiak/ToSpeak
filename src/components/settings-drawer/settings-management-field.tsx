@@ -5,8 +5,6 @@ import {
   FieldLabel,
   FieldDescription,
   FieldContent,
-  FieldGroup,
-  FieldLegend,
 } from "@/components/ui/field";
 
 interface SettingsManagementFieldProps {
@@ -23,8 +21,7 @@ export function SettingsManagementField({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <FieldGroup>
-      <FieldLegend>設定の管理</FieldLegend>
+    <>
       <Field>
         <FieldLabel>設定のインポート/エクスポート</FieldLabel>
         <FieldContent>
@@ -94,7 +91,7 @@ export function SettingsManagementField({
           </FieldDescription>
         </FieldContent>
       </Field>
-    </FieldGroup>
+    </>
   );
 }
 

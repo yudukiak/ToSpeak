@@ -1,17 +1,9 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Field,
-  FieldLabel,
-  FieldDescription,
-  FieldContent,
-  FieldGroup,
-  FieldLegend,
-} from "@/components/ui/field";
-import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import safeRegex from "safe-regex";
+import { SettingsListItemView } from "./settings-list-item-view";
+import { SettingsListItemEdit } from "./settings-list-item-edit";
+import { SettingsListItemAddForm } from "./settings-list-item-add-form";
 import type { BlockedApp } from "@/types/settings";
 
 interface BlockedAppListProps {
@@ -78,84 +70,76 @@ export function BlockedAppList({
   });
 
   return (
-    <FieldGroup>
-      <FieldLegend>読ませないアプリ</FieldLegend>
-      <Field>
-        <FieldLabel>新しい除外アプリを追加</FieldLabel>
-        <FieldContent>
-          <div className="space-y-2">
-            <div className="space-y-2">
-              {fieldConfigs.map((config) => (
-                <div key={config.key} className="flex items-center gap-2">
-                  <Input
-                    value={newFields[config.key].value}
-                    onChange={(e) =>
-                      setNewFields((prev) => ({
-                        ...prev,
-                        [config.key]: { ...prev[config.key], value: e.target.value },
-                      }))
-                    }
-                    placeholder={config.placeholder}
-                    className="flex-1"
-                    aria-label={config.placeholder}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={newFields[config.key].isRegex}
-                      onCheckedChange={(checked) =>
-                        setNewFields((prev) => ({
-                          ...prev,
-                          [config.key]: { ...prev[config.key], isRegex: checked },
-                        }))
-                      }
-                      id={`${config.id}-regex`}
-                      aria-label="正規表現を使用"
-                    />
-                    <label
-                      htmlFor={`${config.id}-regex`}
-                      className="text-sm text-muted-foreground whitespace-nowrap cursor-pointer"
-                    >
-                      正規表現
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Button
-              type="button"
-              onClick={() => {
-                if (newFields.app.value || newFields.app_id.value) {
-                  onAdd({
-                    app: newFields.app.value || undefined,
-                    app_id: newFields.app_id.value || undefined,
-                    appIsRegex: newFields.app.isRegex,
-                    appIdIsRegex: newFields.app_id.isRegex,
-                    title: newFields.title.value || undefined,
-                    titleIsRegex: newFields.title.isRegex,
-                    text: newFields.text.value || undefined,
-                    textIsRegex: newFields.text.isRegex,
-                  });
-                  setNewFields({
-                    app: { value: "", isRegex: false },
-                    app_id: { value: "", isRegex: false },
-                    title: { value: "", isRegex: false },
-                    text: { value: "", isRegex: false },
-                  });
-                }
-              }}
-              className="w-full"
-              aria-label="除外アプリを追加"
-            >
-              <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-              追加
-              <span className="sr-only">除外アプリを追加</span>
-            </Button>
-          </div>
-          <FieldDescription>
-            アプリ名またはアプリIDのいずれかを指定してください。タイトルや本文を指定すると、app/app_id × (title OR text) の組み合わせで除外されます。正規表現を使用する場合は、スイッチをONにしてください。
-          </FieldDescription>
-        </FieldContent>
-      </Field>
+    <div className="space-y-2">
+      <SettingsListItemAddForm
+        label="新しい除外アプリを追加"
+        fields={fieldConfigs.map((config) => ({
+          key: config.key,
+          value: newFields[config.key].value,
+          placeholder: config.placeholder,
+          ariaLabel: config.placeholder,
+          isRegex: newFields[config.key].isRegex,
+          id: `${config.id}-regex`,
+        }))}
+        onFieldChange={(key, value) => {
+          setNewFields((prev) => ({
+            ...prev,
+            [key]: { ...prev[key as FieldKey], value },
+          }));
+        }}
+        onRegexChange={(key, checked) => {
+          setNewFields((prev) => ({
+            ...prev,
+            [key]: { ...prev[key as FieldKey], isRegex: checked },
+          }));
+        }}
+        onAdd={() => {
+          if (newFields.app.value || newFields.app_id.value) {
+            // 正規表現が有効なフィールドをチェック
+            const regexFields = [
+              { key: "app", value: newFields.app.value, isRegex: newFields.app.isRegex },
+              { key: "app_id", value: newFields.app_id.value, isRegex: newFields.app_id.isRegex },
+              { key: "title", value: newFields.title.value, isRegex: newFields.title.isRegex },
+              { key: "text", value: newFields.text.value, isRegex: newFields.text.isRegex },
+            ];
+
+            for (const field of regexFields) {
+              if (field.isRegex && field.value && !safeRegex(field.value)) {
+                const fieldNames: Record<string, string> = {
+                  app: "アプリ名",
+                  app_id: "アプリID",
+                  title: "タイトル",
+                  text: "本文",
+                };
+                toast.error(
+                  `${fieldNames[field.key]}の正規表現パターンが危険です。パターンを変更してください。`
+                );
+                return;
+              }
+            }
+
+            onAdd({
+              app: newFields.app.value || undefined,
+              app_id: newFields.app_id.value || undefined,
+              appIsRegex: newFields.app.isRegex,
+              appIdIsRegex: newFields.app_id.isRegex,
+              title: newFields.title.value || undefined,
+              titleIsRegex: newFields.title.isRegex,
+              text: newFields.text.value || undefined,
+              textIsRegex: newFields.text.isRegex,
+            });
+            setNewFields({
+              app: { value: "", isRegex: false },
+              app_id: { value: "", isRegex: false },
+              title: { value: "", isRegex: false },
+              text: { value: "", isRegex: false },
+            });
+          }
+        }}
+        addButtonLabel="追加"
+        addButtonAriaLabel="除外アプリを追加"
+        description="アプリ名またはアプリIDのいずれかを指定してください。タイトルや本文を指定すると、app/app_id × (title OR text) の組み合わせで除外されます。正規表現を使用する場合は、スイッチをONにしてください。各フィールドは100文字以上は登録できません。"
+      />
       {blockedApps.length > 0 && (
         <div className="space-y-2">
           {blockedApps.map((blockedApp, index) => (
@@ -165,188 +149,134 @@ export function BlockedAppList({
             >
               {editingBlockedAppIndex === index ? (
                 // 編集モード（4つのフィールドすべてを編集可能）
-                <div className="flex-1 space-y-2">
-                  <div className="space-y-2">
-                    {fieldConfigs.map((config) => (
-                      <div key={config.key} className="flex items-center gap-2">
-                        <Input
-                          value={editingFields[config.key].value}
-                          onChange={(e) =>
-                            setEditingFields((prev) => ({
-                              ...prev,
-                              [config.key]: {
-                                ...prev[config.key],
-                                value: e.target.value,
-                              },
-                            }))
-                          }
-                          placeholder={config.placeholder.split("（")[0]}
-                          className="flex-1"
-                          aria-label={`${config.placeholder.split("（")[0]}を編集`}
-                        />
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={editingFields[config.key].isRegex}
-                            onCheckedChange={(checked) =>
-                              setEditingFields((prev) => ({
-                                ...prev,
-                                [config.key]: {
-                                  ...prev[config.key],
-                                  isRegex: checked,
-                                },
-                              }))
-                            }
-                            id={`edit-blocked-${config.id}-regex-${index}`}
-                            aria-label="正規表現を使用"
-                          />
-                          <label
-                            htmlFor={`edit-blocked-${config.id}-regex-${index}`}
-                            className="text-sm text-muted-foreground whitespace-nowrap"
-                          >
-                            正規表現
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => {
-                        const updated: BlockedApp = {};
-                        if (editingFields.app.value) {
-                          updated.app = editingFields.app.value;
-                          updated.appIsRegex = editingFields.app.isRegex;
-                        }
-                        if (editingFields.app_id.value) {
-                          updated.app_id = editingFields.app_id.value;
-                          updated.appIdIsRegex = editingFields.app_id.isRegex;
-                        }
-                        if (editingFields.title.value) {
-                          updated.title = editingFields.title.value;
-                          updated.titleIsRegex = editingFields.title.isRegex;
-                        }
-                        if (editingFields.text.value) {
-                          updated.text = editingFields.text.value;
-                          updated.textIsRegex = editingFields.text.isRegex;
-                        }
-                        onUpdate(index, updated);
-                        setEditingBlockedAppIndex(null);
-                      }}
-                      aria-label="除外アプリを保存"
-                    >
-                      <Check className="h-4 w-4 mr-1" aria-hidden="true" />
-                      保存
-                      <span className="sr-only">除外アプリを保存</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingBlockedAppIndex(null);
-                      }}
-                      aria-label="除外アプリをキャンセル"
-                    >
-                      <X className="h-4 w-4 mr-1" aria-hidden="true" />
-                      キャンセル
-                      <span className="sr-only">除外アプリをキャンセル</span>
-                    </Button>
-                  </div>
-                </div>
+                <SettingsListItemEdit
+                  fields={fieldConfigs.map((config) => ({
+                    key: config.key,
+                    value: editingFields[config.key].value,
+                    placeholder: config.placeholder.split("（")[0],
+                    ariaLabel: `${config.placeholder.split("（")[0]}を編集`,
+                    isRegex: editingFields[config.key].isRegex,
+                    id: `edit-blocked-${config.id}-regex-${index}`,
+                    fieldName: config.key === "app" ? "アプリ名" : config.key === "app_id" ? "アプリID" : config.key === "title" ? "タイトル" : "本文",
+                  }))}
+                  onFieldChange={(key, value) => {
+                    setEditingFields((prev) => ({
+                      ...prev,
+                      [key]: { ...prev[key as FieldKey], value },
+                    }));
+                  }}
+                  onRegexChange={(key, checked) => {
+                    setEditingFields((prev) => ({
+                      ...prev,
+                      [key]: { ...prev[key as FieldKey], isRegex: checked },
+                    }));
+                  }}
+                  onSave={() => {
+                    // 正規表現が有効なフィールドをチェック
+                    const regexFields = [
+                      { key: "app", value: editingFields.app.value, isRegex: editingFields.app.isRegex },
+                      { key: "app_id", value: editingFields.app_id.value, isRegex: editingFields.app_id.isRegex },
+                      { key: "title", value: editingFields.title.value, isRegex: editingFields.title.isRegex },
+                      { key: "text", value: editingFields.text.value, isRegex: editingFields.text.isRegex },
+                    ];
+
+                    for (const field of regexFields) {
+                      if (field.isRegex && field.value && !safeRegex(field.value)) {
+                        const fieldNames: Record<string, string> = {
+                          app: "アプリ名",
+                          app_id: "アプリID",
+                          title: "タイトル",
+                          text: "本文",
+                        };
+                        toast.error(
+                          `${fieldNames[field.key]}の正規表現パターンが危険です。パターンを変更してください。`
+                        );
+                        return;
+                      }
+                    }
+
+                    const updated: BlockedApp = {};
+                    if (editingFields.app.value) {
+                      updated.app = editingFields.app.value;
+                      updated.appIsRegex = editingFields.app.isRegex;
+                    }
+                    if (editingFields.app_id.value) {
+                      updated.app_id = editingFields.app_id.value;
+                      updated.appIdIsRegex = editingFields.app_id.isRegex;
+                    }
+                    if (editingFields.title.value) {
+                      updated.title = editingFields.title.value;
+                      updated.titleIsRegex = editingFields.title.isRegex;
+                    }
+                    if (editingFields.text.value) {
+                      updated.text = editingFields.text.value;
+                      updated.textIsRegex = editingFields.text.isRegex;
+                    }
+                    onUpdate(index, updated);
+                    setEditingBlockedAppIndex(null);
+                  }}
+                  onCancel={() => {
+                    setEditingBlockedAppIndex(null);
+                  }}
+                  saveAriaLabel="除外アプリを保存"
+                  cancelAriaLabel="除外アプリをキャンセル"
+                />
               ) : (
                 // 表示モード
-                <>
-                  <div className="flex-1 text-sm space-y-1">
-                    {blockedApp.app && (
-                      <div>
-                        アプリ: {blockedApp.app}
-                        {blockedApp.appIsRegex && (
-                          <Badge variant="secondary" className="ml-2">
-                            正規表現
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                    {blockedApp.app_id && (
-                      <div>
-                        ID: {blockedApp.app_id}
-                        {blockedApp.appIdIsRegex && (
-                          <Badge variant="secondary" className="ml-2">
-                            正規表現
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                    {blockedApp.title && (
-                      <div>
-                        タイトル: {blockedApp.title}
-                        {blockedApp.titleIsRegex && (
-                          <Badge variant="secondary" className="ml-2">
-                            正規表現
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                    {blockedApp.text && (
-                      <div>
-                        本文: {blockedApp.text}
-                        {blockedApp.textIsRegex && (
-                          <Badge variant="secondary" className="ml-2">
-                            正規表現
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingBlockedAppIndex(index);
-                      setEditingFields({
-                        app: {
-                          value: blockedApp.app || "",
-                          isRegex: blockedApp.appIsRegex || false,
-                        },
-                        app_id: {
-                          value: blockedApp.app_id || "",
-                          isRegex: blockedApp.appIdIsRegex || false,
-                        },
-                        title: {
-                          value: blockedApp.title || "",
-                          isRegex: blockedApp.titleIsRegex || false,
-                        },
-                        text: {
-                          value: blockedApp.text || "",
-                          isRegex: blockedApp.textIsRegex || false,
-                        },
-                      });
-                    }}
-                    aria-label="除外アプリを編集"
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden="true" />
-                    <span className="sr-only">除外アプリを編集</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemove(index)}
-                    aria-label="除外アプリを削除"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    <span className="sr-only">除外アプリを削除</span>
-                  </Button>
-                </>
+                <SettingsListItemView
+                  fields={[
+                    {
+                      label: "アプリ",
+                      value: blockedApp.app || "",
+                      isRegex: blockedApp.appIsRegex,
+                    },
+                    {
+                      label: "ID",
+                      value: blockedApp.app_id || "",
+                      isRegex: blockedApp.appIdIsRegex,
+                    },
+                    {
+                      label: "タイトル",
+                      value: blockedApp.title || "",
+                      isRegex: blockedApp.titleIsRegex,
+                    },
+                    {
+                      label: "本文",
+                      value: blockedApp.text || "",
+                      isRegex: blockedApp.textIsRegex,
+                    },
+                  ]}
+                  onEdit={() => {
+                    setEditingBlockedAppIndex(index);
+                    setEditingFields({
+                      app: {
+                        value: blockedApp.app || "",
+                        isRegex: blockedApp.appIsRegex || false,
+                      },
+                      app_id: {
+                        value: blockedApp.app_id || "",
+                        isRegex: blockedApp.appIdIsRegex || false,
+                      },
+                      title: {
+                        value: blockedApp.title || "",
+                        isRegex: blockedApp.titleIsRegex || false,
+                      },
+                      text: {
+                        value: blockedApp.text || "",
+                        isRegex: blockedApp.textIsRegex || false,
+                      },
+                    });
+                  }}
+                  onRemove={() => onRemove(index)}
+                  editAriaLabel="除外アプリを編集"
+                  removeAriaLabel="除外アプリを削除"
+                />
               )}
             </div>
           ))}
         </div>
       )}
-    </FieldGroup>
+    </div>
   );
 }
 

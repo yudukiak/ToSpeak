@@ -5,8 +5,6 @@ import {
   FieldLabel,
   FieldDescription,
   FieldContent,
-  FieldGroup,
-  FieldLegend,
 } from "@/components/ui/field";
 
 interface SpeechTemplateFieldProps {
@@ -19,18 +17,22 @@ export function SpeechTemplateField({
   onUpdate,
 }: SpeechTemplateFieldProps) {
   return (
-    <FieldGroup>
-      <FieldLegend>読ませるテンプレート</FieldLegend>
-      <Field>
+    <Field>
         <FieldLabel>テンプレート</FieldLabel>
         <FieldContent>
           <div className="flex gap-2">
             <Input
               value={speechTemplate}
-              onChange={(e) => onUpdate(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 100) {
+                  onUpdate(value);
+                }
+              }}
               placeholder="{app}、{title}、{text}"
               className="flex-1"
               aria-label="テンプレートを入力"
+              maxLength={100}
             />
             <Button
               type="button"
@@ -44,11 +46,10 @@ export function SpeechTemplateField({
           </div>
           <FieldDescription>
             使用可能なプレースホルダー: {"{app}"}, {"{title}"},{" "}
-            {"{text}"}
+            {"{text}"}。100文字以上は登録できません。
           </FieldDescription>
         </FieldContent>
       </Field>
-    </FieldGroup>
   );
 }
 

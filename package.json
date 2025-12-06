@@ -28,6 +28,7 @@
     "publish": "npm run build:clean && npm run build:bridge && npm run build:app && dotenv -e .env -- electron-builder --publish=always && npm run update-github-release-notes"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",

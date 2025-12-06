@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FieldSet, FieldSeparator } from "@/components/ui/field";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Drawer,
   DrawerContent,
@@ -57,83 +62,120 @@ export function SettingsDrawer() {
             <DrawerDescription>設定は自動で保存されます。</DrawerDescription>
           </DrawerHeader>
           <div className="pl-4 pr-4 pb-4">
-            <FieldSet className="gap-6">
-              {/* 読ませるテンプレート */}
-              <SpeechTemplateField
-                speechTemplate={settings.speechTemplate}
-                onUpdate={(speechTemplate) =>
-                  updateSettings({ speechTemplate })
-                }
-              />
-              <FieldSeparator />
-              {/* 変換リスト */}
-              <ReplacementList
-                replacements={settings.replacements}
-                onAdd={addReplacement}
-                onUpdate={updateReplacement}
-                onRemove={removeReplacement}
-              />
-              <FieldSeparator />
+            <Accordion type="multiple" className="w-full">
               {/* 音声設定 */}
-              <VoiceSettingsField
-                voiceName={settings.voiceName}
-                availableVoices={availableVoices}
-                onVoiceChange={(voiceName) => {
-                  updateSettings({ voiceName: voiceName || undefined });
-                  setVoice(voiceName);
-                }}
-              />
-              <FieldSeparator />
+              <AccordionItem value="voice">
+                <AccordionTrigger>音声設定</AccordionTrigger>
+                <AccordionContent>
+                  <VoiceSettingsField
+                    voiceName={settings.voiceName}
+                    availableVoices={availableVoices}
+                    onVoiceChange={(voiceName) => {
+                      updateSettings({ voiceName: voiceName || undefined });
+                      setVoice(voiceName);
+                    }}
+                  />
+                </AccordionContent>
+              </AccordionItem>
               {/* 音量設定 */}
-              <VolumeSettingsField
-                volume={settings.volume || 20}
-                onVolumeChange={(volume) => {
-                  updateSettings({ volume });
-                  setVolume(volume);
-                }}
-              />
-              <FieldSeparator />
+              <AccordionItem value="volume">
+                <AccordionTrigger>音量設定</AccordionTrigger>
+                <AccordionContent>
+                  <VolumeSettingsField
+                    volume={settings.volume || 20}
+                    onVolumeChange={(volume) => {
+                      updateSettings({ volume });
+                      setVolume(volume);
+                    }}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+              {/* 読ませるテンプレート */}
+              <AccordionItem value="speech-template">
+                <AccordionTrigger>読ませるテンプレート</AccordionTrigger>
+                <AccordionContent>
+                  <SpeechTemplateField
+                    speechTemplate={settings.speechTemplate}
+                    onUpdate={(speechTemplate) =>
+                      updateSettings({ speechTemplate })
+                    }
+                  />
+                </AccordionContent>
+              </AccordionItem>
               {/* 読み上げテキストの最大文字数 */}
-              <MaxTextLengthField
-                maxTextLength={settings.maxTextLength || 0}
-                onUpdate={(maxTextLength) =>
-                  updateSettings({ maxTextLength })
-                }
-              />
-              <FieldSeparator />
+              <AccordionItem value="max-text-length">
+                <AccordionTrigger>読み上げテキストの最大文字数</AccordionTrigger>
+                <AccordionContent>
+                  <MaxTextLengthField
+                    maxTextLength={settings.maxTextLength || 0}
+                    onUpdate={(maxTextLength) =>
+                      updateSettings({ maxTextLength })
+                    }
+                  />
+                </AccordionContent>
+              </AccordionItem>
               {/* 重複通知の無視 */}
-              <DuplicateNotificationField
-                duplicateNotificationIgnoreSeconds={
-                  settings.duplicateNotificationIgnoreSeconds ?? 30
-                }
-                onUpdate={(duplicateNotificationIgnoreSeconds) =>
-                  updateSettings({ duplicateNotificationIgnoreSeconds })
-                }
-              />
-              <FieldSeparator />
+              <AccordionItem value="duplicate-notification">
+                <AccordionTrigger>重複通知の無視</AccordionTrigger>
+                <AccordionContent>
+                  <DuplicateNotificationField
+                    duplicateNotificationIgnoreSeconds={
+                      settings.duplicateNotificationIgnoreSeconds ?? 30
+                    }
+                    onUpdate={(duplicateNotificationIgnoreSeconds) =>
+                      updateSettings({ duplicateNotificationIgnoreSeconds })
+                    }
+                  />
+                </AccordionContent>
+              </AccordionItem>
               {/* 連続文字の短縮 */}
-              <ConsecutiveCharField
-                consecutiveCharMinLength={settings.consecutiveCharMinLength || 0}
-                onUpdate={(consecutiveCharMinLength: number) =>
-                  updateSettings({ consecutiveCharMinLength })
-                }
-              />
-              <FieldSeparator />
+              <AccordionItem value="consecutive-char">
+                <AccordionTrigger>連続文字の短縮</AccordionTrigger>
+                <AccordionContent>
+                  <ConsecutiveCharField
+                    consecutiveCharMinLength={settings.consecutiveCharMinLength || 0}
+                    onUpdate={(consecutiveCharMinLength: number) =>
+                      updateSettings({ consecutiveCharMinLength })
+                    }
+                  />
+                </AccordionContent>
+              </AccordionItem>
+              {/* 変換リスト */}
+              <AccordionItem value="replacement-list">
+                <AccordionTrigger>変換リスト</AccordionTrigger>
+                <AccordionContent>
+                  <ReplacementList
+                    replacements={settings.replacements}
+                    onAdd={addReplacement}
+                    onUpdate={updateReplacement}
+                    onRemove={removeReplacement}
+                  />
+                </AccordionContent>
+              </AccordionItem>
               {/* 読ませないアプリ */}
-              <BlockedAppList
-                blockedApps={settings.blockedApps}
-                onAdd={addBlockedApp}
-                onUpdate={updateBlockedApp}
-                onRemove={removeBlockedApp}
-              />
-              <FieldSeparator />
+              <AccordionItem value="blocked-app">
+                <AccordionTrigger>読ませないアプリ</AccordionTrigger>
+                <AccordionContent>
+                  <BlockedAppList
+                    blockedApps={settings.blockedApps}
+                    onAdd={addBlockedApp}
+                    onUpdate={updateBlockedApp}
+                    onRemove={removeBlockedApp}
+                  />
+                </AccordionContent>
+              </AccordionItem>
               {/* 設定の管理 */}
-              <SettingsManagementField
-                onExport={exportSettings}
-                onImport={importSettings}
-                onReset={resetSettings}
-              />
-            </FieldSet>
+              <AccordionItem value="settings-management">
+                <AccordionTrigger>設定の管理</AccordionTrigger>
+                <AccordionContent>
+                  <SettingsManagementField
+                    onExport={exportSettings}
+                    onImport={importSettings}
+                    onReset={resetSettings}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         </ScrollArea>
       </DrawerContent>
