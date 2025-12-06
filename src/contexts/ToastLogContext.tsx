@@ -257,11 +257,11 @@ function setupIpcListener() {
 
   const ipcRenderer = window.ipcRenderer;
 
-  const handleToastLog = (_event: IpcRendererEvent, message: ToastLog) => {
+    const handleToastLog = (_event: IpcRendererEvent, message: ToastLog) => {
     // レンダラー側のコンソールに全てのログを出力
     const source = message.source || "unknown";
     const type = message.type || "unknown";
-    const msgText = message.message || JSON.stringify(message);
+    const msgText = message.text || JSON.stringify(message);
 
     switch (type) {
       case "debug":
@@ -426,14 +426,14 @@ export function ToastLogProvider({ children }: { children: ReactNode }) {
       // 保持されているログを取得
       window.ipcRenderer.invoke("get-stored-logs").then((storedLogs: ToastLog[]) => {
         if (storedLogs && storedLogs.length > 0) {
-          // 空のログをフィルタリング（title、text、messageがすべて空のログを除外）
+          // 空のログをフィルタリング（title、textがすべて空のログを除外）
           const filteredLogs = storedLogs.filter((log) => {
             // past_notificationsタイプは除外しない
             if (log.type === "past_notifications") {
               return true;
             }
-            // title、text、messageのいずれかが存在する場合は表示
-            return !!(log.title || log.text || log.message);
+            // title、textのいずれかが存在する場合は表示
+            return !!(log.title || log.text);
           });
           
           if (filteredLogs.length > 0) {

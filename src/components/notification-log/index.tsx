@@ -51,7 +51,7 @@ export function NotificationLog({ logs }: NotificationLogProps) {
       <div className="flex flex-col-reverse gap-2 p-2 pr-4">
         {logs.map((log, index) => {
           const { icon: Icon, title: logTitle } = getLogConfig(log);
-          const { app, app_id, notification_id, text, timestamp, title, type, message, notifications } = log;
+          const { app, app_id, notification_id, text, timestamp, title, type, notifications } = log;
 
           const headerAction =
             type === "past_notifications" && notifications ? (
@@ -64,7 +64,7 @@ export function NotificationLog({ logs }: NotificationLogProps) {
             <NotificationCard
               icon={Icon}
               title={title || ""}
-              content={text || message}
+              content={text || ""}
               timestamp={timestamp}
               logTitle={type === "notification" ? logTitle : undefined}
               headerAction={headerAction}

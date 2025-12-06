@@ -194,7 +194,7 @@ function startToastBridge() {
           // Electronのコンソールにログ出力
           const source = message.source || 'toast_bridge'
           const type = message.type || 'unknown'
-          const msgText = message.message || JSON.stringify(message)
+          const msgText = message.text || JSON.stringify(message)
           
           switch (type) {
             case 'debug':

@@ -71,8 +71,8 @@ main_loop = None  # メインイベントループへの参照
 
 def send_json(data: dict):
     """JSONメッセージをstdoutに出力（Electron側で受け取る）"""
-    if "message" in data:
-        data["message"] = f"{data['message']}"
+    if "text" in data:
+        data["text"] = f"{data['text']}"
     
     # sourceを設定（設定されていない場合のみ）
     if "source" not in data:
@@ -86,7 +86,7 @@ def log_debug(message: str):
     log_msg = {
         "type": "debug",
         "source": "toast_bridge",
-        "message": message,
+        "text": message,
         "timestamp": datetime.now().isoformat()
     }
     send_json(log_msg)
@@ -97,7 +97,7 @@ def log_error(message: str):
     log_msg = {
         "type": "error",
         "source": "toast_bridge",
-        "message": message,
+        "text": message,
         "timestamp": datetime.now().isoformat()
     }
     send_json(log_msg)
@@ -221,7 +221,7 @@ async def change_voice(voice_name: str = None):
                 "type": "info",
                 "source": "toast_bridge",
                 "title": "音声を変更しました",
-                "message": target_voice,
+                "text": target_voice,
                 "timestamp": datetime.now().isoformat()
             })
             
@@ -238,14 +238,14 @@ async def change_voice(voice_name: str = None):
                     "type": "info",
                     "source": "toast_bridge",
                     "title": "音声設定",
-                    "message": "音声が設定されていません。読み上げは無効です。プルダウンで音声を選択してください。",
+                    "text": "音声が設定されていません。読み上げは無効です。プルダウンで音声を選択してください。",
                     "timestamp": datetime.now().isoformat()
                 })
             send_json({
                 "type": "info",
                 "source": "toast_bridge",
                 "title": "音声が無効化されました",
-                "message": "読み上げは行われません。",
+                "text": "読み上げは行われません。",
                 "timestamp": datetime.now().isoformat()
             })
     except Exception as e:
@@ -878,7 +878,7 @@ async def main():
       "type": "info",
       "source": "toast_bridge",
       "title": "お知らせ",
-      "message": "ToSpeak の起動を準備中",
+      "text": "ToSpeak の起動を準備中",
       "timestamp": datetime.now().isoformat()
     })
 
@@ -980,7 +980,7 @@ async def main():
                     "type": "past_notifications",
                     "source": "toast_bridge",
                     "title": "過去の通知",
-                    "message": f"{len(past_notifications)}件の過去の通知があります",
+                    "text": f"{len(past_notifications)}件の過去の通知があります",
                     "notifications": past_notifications,
                     "timestamp": datetime.now().isoformat()
                 })
@@ -992,7 +992,7 @@ async def main():
         "type": "ready",
         "source": "toast_bridge",
         "title": "お知らせ",
-        "message": "ToSpeak の起動を完了しました",
+        "text": "ToSpeak の起動を完了しました",
         "timestamp": datetime.now().isoformat(),
         "volume": VOLUME_LEVEL,
     })

@@ -24,7 +24,6 @@ export interface ToastLog {
   text?: string;
   notification_id?: string;
   timestamp?: string;
-  message?: string;
   source?: string;
   notifications?: PastNotification[]; // 過去の通知一覧
   voices?: string[]; // 利用可能な音声リスト（available_voicesタイプの場合）
