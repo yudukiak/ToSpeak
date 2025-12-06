@@ -145,7 +145,7 @@ ToSpeak/
 │ ├ components/                # Reactコンポーネント
 │ │ ├ notification-log/       # 通知ログ関連コンポーネント
 │ │ ├ settings-drawer/        # 設定ドロワー関連コンポーネント
-│ │ ├ ui/                     # UIコンポーネント（shadcn/ui）
+│ │ ├ ui/                     # shadcn/ui用のUIコンポーネント
 │ │ ├ Header.tsx              # ヘッダーコンポーネント
 │ │ └ update-notification.tsx # 更新通知コンポーネント
 │ ├ contexts/                  # React Context
@@ -158,11 +158,18 @@ ToSpeak/
 │ │ ├ settings.ts             # 設定関連の型
 │ │ └ toast-log.ts            # 通知ログ関連の型
 │ ├ safe-regex.d.ts            # safe-regex型定義（ReDoS対策）
+│ ├ assets/                    # アセットファイル
 │ ├ App.tsx                    # メインアプリケーションコンポーネント
 │ ├ main.tsx                   # Reactエントリーポイント
-│ └ vite-env.d.ts              # Vite型定義
-├ python/                       # Pythonブリッジ
-│ └ toast_bridge.py            # Toast通知監視・音声合成
+│ └ ...                        # その他の設定ファイル
+├ python/                       # Pythonブリッジ（リファクタリング済み）
+│ ├ config.py                  # 設定・定数・グローバル変数
+│ ├ logger.py                  # ログ出力機能
+│ ├ text_processor.py          # テキスト処理（英語→片仮名変換など）
+│ ├ sapi_speaker.py            # SAPI音声読み上げ機能
+│ ├ notification_monitor.py    # Toast通知監視機能
+│ ├ stdin_handler.py           # stdinコマンド受付機能
+│ └ toast_bridge.py            # メイン処理（エントリーポイント）
 ├ scripts/                      # ビルド・リリーススクリプト
 │ └ update-github-release-notes.js # GitHub Release Notes更新スクリプト
 ├ public/                       # 静的ファイル
@@ -173,7 +180,8 @@ ToSpeak/
 ├ tsconfig.json                 # TypeScript設定
 ├ toast_bridge.spec             # PyInstaller設定
 ├ requirements.txt              # Python依存関係
-└ package.json                  # Node.js依存関係・スクリプト
+├ package.json                  # Node.js依存関係・スクリプト
+└ ...                          # その他の設定ファイル
 ```
 
 ### ビルド成果物（ビルド時に生成、.gitignore対象）
