@@ -270,7 +270,8 @@ function setupIpcListener() {
         return;
       case "error":
         console.error(`[${source}] ${msgText}`, message);
-        break;
+        // errorタイプはコンソールのみ出力、UIには表示しない
+        return;
       case "info":
         console.info(`[${source}] ${msgText}`, message);
         break;
