@@ -1,7 +1,7 @@
 {
   "name": "tospeak",
   "productName": "ToSpeak",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "ToSpeak is a tool that allows you to speak notifications on your computer.",
   "homepage": "https://github.com/yudukiak/ToSpeak",
   "bugs": {
